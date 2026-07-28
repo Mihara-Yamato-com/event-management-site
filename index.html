@@ -111,6 +111,36 @@ a { color: inherit; }
   padding: 0 var(--space-lg);
 }
 
+.mainwrap { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+
+.apphead {
+  height: var(--header-height);
+  flex: 0 0 var(--header-height);
+  border-bottom: var(--border);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-2xl);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.apphead__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-weight: var(--font-weight-medium);
+}
+.apphead__logo { height: 24px; width: auto; border-radius: var(--radius-sm); }
+.apphead__actions { display: flex; gap: var(--space-lg); }
+.apphead__link {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.apphead__link:hover { color: var(--color-text); text-decoration: underline; }
+
 .main {
   flex: 1 1 auto;
   min-width: 0;
@@ -363,6 +393,27 @@ input[type=datetime-local] { max-width: 260px; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-lg);
+}
+.public__nav { display: flex; gap: var(--space-lg); }
+.public__nav a {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  padding-bottom: 2px;
+}
+.public__nav a:hover { color: var(--color-text); }
+.public__nav a.is-active {
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  border-bottom: 2px solid var(--color-accent);
+}
+.public__lead {
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
 }
 .public__brand { font-weight: var(--font-weight-bold); font-size: var(--font-size-lg); text-decoration: none; }
 .public__banner {
@@ -400,15 +451,26 @@ input[type=datetime-local] { max-width: 260px; }
    定数
    ------------------------------------------------------------ */
 var DB_NAME = 'event-manager-db';   // 仕様書 6.1（一般名を避ける）
-var DB_VERSION = 1;
+var DB_VERSION = 2;                 // v1.16 で files ストアを追加（1→2）
 var STORE_EVENTS = 'events';
 var STORE_ENTRIES = 'entries';
 var STORE_SETTINGS = 'settings';
+var STORE_FILES = 'files';          // F-34 運用資料（組織全体）
 
 var MAX_CATEGORIES = 20;            // D-12
 var DEFAULT_CATEGORIES = ['セミナー', '勉強会', '研修', '説明会', '懇親会', 'その他'];
 var CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // D-32（O/0/I/1 を除外）
 var CODE_LENGTH = 8;
+
+/* D-40 運用資料（F-34 / S-16） */
+var FILE_MIME = [
+  'application/pdf', 'image/png', 'image/jpeg',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+];
+var FILE_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'xlsx', 'docx'];
+var FILE_MAX_BYTES = 5 * 1024 * 1024;
+var MAX_FILES = 20;
 
 /* ------------------------------------------------------------
    ストレージ層（IndexedDB）
@@ -439,6 +501,12 @@ function openDb() {
       }
       if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
         db.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
+      }
+      // 既存ストアは作り直さず、不足しているものだけを追加する。
+      // 旧バージョンから開いた場合もイベント・申込データは保持される
+      if (!db.objectStoreNames.contains(STORE_FILES)) {
+        var fs = db.createObjectStore(STORE_FILES, { keyPath: 'id' });
+        fs.createIndex('createdAt', 'createdAt', { unique: false });
       }
     };
     req.onsuccess = function () { resolve(req.result); };
@@ -589,7 +657,10 @@ var MSG = {
   ticketDelete: '申込のある券種は削除できません',
   noTicket: '公開するには券種を1件以上登録してください',
   categoryInUse: 'このカテゴリを使用しているイベントがあるため削除できません',
-  imageTooLarge: '画像は2MB以内のファイルを選択してください'
+  imageTooLarge: '画像は2MB以内のファイルを選択してください',
+  fileTooLarge: 'ファイルは5MB以内のものを選択してください',
+  fileFormat: '対応していないファイル形式です',
+  fileTooMany: '資料は20件以内で登録してください'
 };
 
 /* ------------------------------------------------------------
@@ -768,7 +839,7 @@ function ensureSettings() {
   var defaults = {
     org: { name: 'NCT', logo: null, headerImage: null, intro: '' },   // F-09
     categories: DEFAULT_CATEGORIES.slice(),                            // D-12
-    defaultFormFields: [],                                             // F-07
+    defaultFormFields: defaultFormFieldSet(),                          // F-07 / D-42
     mailTemplates: { invite: '', reminder: '', announce: '' },         // F-19 / F-29
     sendLog: [],                                                       // F-19
     passcode: null,                                                    // F-27（初回起動時に設定）
@@ -784,6 +855,18 @@ function ensureSettings() {
   }));
 }
 
+/* D-42 既定の申込フォーム項目
+   自社主催であっても社員限定とは限らないため、所属部署・年数は既定にしない */
+function defaultFormFieldSet() {
+  return [
+    { id: uid('ff'), label: '参加のきっかけ', type: 'select',
+      options: ['社内の案内', '知人の紹介', 'SNS', 'その他'], required: false, order: 1 },
+    { id: uid('ff'), label: '懇親会に参加する', type: 'checkbox',
+      options: [], required: false, order: 2 },
+    { id: uid('ff'), label: '質問・要望', type: 'text', options: [], required: false, order: 3 }
+  ];
+}
+
 /* ------------------------------------------------------------
    F-21 デモデータ投入 / 全データ初期化
    内容は 仕様決定シート.md F節に従う
@@ -792,7 +875,8 @@ function resetAllData() {
   return Promise.all([
     store.clear(STORE_EVENTS),
     store.clear(STORE_ENTRIES),
-    store.clear(STORE_SETTINGS)
+    store.clear(STORE_SETTINGS),
+    store.clear(STORE_FILES)
   ]).then(ensureSettings).then(function () {
     session.authenticated = false;
     return null;
@@ -834,13 +918,8 @@ function seedDemoData() {
     status: 'published',
     seriesId: seriesId,
     ticketTypes: [ttFullA, ttFullB],
-    formFields: [                                    // F-07（text / select / checkbox 各1）
-      { id: uid('ff'), label: '所属部署', type: 'text', options: [], required: true, order: 1 },
-      { id: uid('ff'), label: '経験年数', type: 'select', options: ['1年未満', '1〜3年', '3年以上'], required: true, order: 2 },
-      { id: uid('ff'), label: '懇親会に参加する', type: 'checkbox', options: [], required: false, order: 3 }
-    ],
+    formFields: defaultFormFieldSet(),               // F-07 / D-42 の既定3項目
     coverImage: null,                                // シート F節：カバー画像なし（空状態の確認を兼ねる）
-    attachments: [],
     createdAt: iso(now - 10 * DAY),
     updatedAt: iso(now - 10 * DAY)
   };
@@ -863,7 +942,6 @@ function seedDemoData() {
     ticketTypes: [ttOpen],
     formFields: [],
     coverImage: null,
-    attachments: [],
     createdAt: iso(now - 5 * DAY),
     updatedAt: iso(now - 5 * DAY)
   };
@@ -886,7 +964,6 @@ function seedDemoData() {
     ticketTypes: [ttDraft],
     formFields: [],
     coverImage: null,
-    attachments: [],
     createdAt: iso(now - 2 * DAY),
     updatedAt: iso(now - 2 * DAY)
   };
@@ -952,7 +1029,18 @@ function seedDemoData() {
    セッション（F-27）
    ログイン状態はメモリ上のみ。ページ再読込で解除される
    ------------------------------------------------------------ */
-var session = { authenticated: false };
+var session = { authenticated: false, orgName: '', orgLogoUrl: null };
+
+/* ヘッダー表示用に組織情報をメモリへ載せる。ロゴの Blob URL は差し替え時に解放する */
+function refreshOrgCache() {
+  return getSetting('org').then(function (org) {
+    org = org || {};
+    session.orgName = org.name || '';
+    if (session.orgLogoUrl) { URL.revokeObjectURL(session.orgLogoUrl); session.orgLogoUrl = null; }
+    if (org.logo) session.orgLogoUrl = URL.createObjectURL(org.logo);
+    return org;
+  });
+}
 
 /* ------------------------------------------------------------
    ルーター — location.hash（History API は file:// で不安定なため使わない）
@@ -965,7 +1053,7 @@ var routes = [
   { screen: 'S-03', auth: true,  pattern: /^\/events\/([^/]+)\/edit$/,         render: renderEventEdit },
   { screen: 'S-04', auth: true,  pattern: /^\/events\/([^/]+)$/,               render: renderEventDetail },
   { screen: 'S-08', auth: true,  pattern: /^\/events\/([^/]+)\/entries$/,      render: renderEntryList },
-  { screen: 'S-15', auth: true,  pattern: /^\/tickets$/,                       render: renderMyTickets },
+  { screen: 'S-16', auth: true,  pattern: /^\/files$/,                          render: renderFiles },
   { screen: 'S-09', auth: true,  pattern: /^\/settings$/,                      render: renderSettings },
   { screen: 'S-12', auth: null,  pattern: /^\/login$/,                         render: renderLogin },
   { screen: 'S-10', auth: false, pattern: /^\/public$/,                        render: renderPublicList },
@@ -1019,17 +1107,20 @@ function router() {
 /* ------------------------------------------------------------
    シェル描画 — 管理側は2カラム、公開側は別レイアウト
    ------------------------------------------------------------ */
+/* サイドバーはナビゲーション専用（仕様書 5.3） */
 var ADMIN_NAV = [
   { path: '/',         label: 'ダッシュボード' },
   { path: '/events',   label: 'イベント' },
-  { path: '/tickets',  label: 'マイチケット' },
+  { path: '/files',    label: '資料' },
   { path: '/settings', label: '設定・データ管理' }
 ];
+
+var ADMIN_SCREENS = ['S-01', 'S-02', 'S-03', 'S-04', 'S-08', 'S-09', 'S-16'];
 
 function renderShell(screenId, contentNode) {
   appEl.textContent = '';
   var isAdmin = session.authenticated && screenId !== 'S-12' &&
-    ['S-01', 'S-02', 'S-03', 'S-04', 'S-08', 'S-09', 'S-15'].indexOf(screenId) >= 0;
+    ADMIN_SCREENS.indexOf(screenId) >= 0;
 
   if (!isAdmin) {
     appEl.appendChild(contentNode);
@@ -1048,11 +1139,21 @@ function renderShell(screenId, contentNode) {
 
   var sidebar = el('aside', { class: 'sidebar' }, [
     el('div', { class: 'sidebar__brand', text: 'イベント管理' }),
-    nav,
-    el('div', { class: 'sidebar__foot' }, [
-      el('a', { class: 'sidebar__link', href: '#/public', text: '公開ページを見る' }),
+    nav
+  ]);
+
+  /* ヘッダー: 左＝ロゴ＋組織名 ／ 右＝外部遷移・セッション操作（仕様書 5.3） */
+  var headBrand = el('div', { class: 'apphead__brand' }, [
+    session.orgLogoUrl
+      ? el('img', { src: session.orgLogoUrl, alt: '', class: 'apphead__logo' }) : null,
+    el('span', { text: session.orgName || '組織名未設定' })
+  ]);
+  var header = el('header', { class: 'apphead' }, [
+    headBrand,
+    el('div', { class: 'apphead__actions' }, [
+      el('a', { class: 'apphead__link', href: '#/public', text: '公開ページを見る' }),
       el('a', {
-        class: 'sidebar__link', href: '#/login', text: 'ログアウト',
+        class: 'apphead__link', href: '#/login', text: 'ログアウト',
         onclick: function () { session.authenticated = false; }
       })
     ])
@@ -1060,7 +1161,10 @@ function renderShell(screenId, contentNode) {
 
   appEl.appendChild(el('div', { class: 'layout' }, [
     sidebar,
-    el('main', { class: 'main' }, [el('div', { class: 'main__inner' }, [contentNode])])
+    el('div', { class: 'mainwrap' }, [
+      header,
+      el('main', { class: 'main' }, [el('div', { class: 'main__inner' }, [contentNode])])
+    ])
   ]));
 }
 
@@ -1388,7 +1492,6 @@ function duplicateEvent(source) {
     status: 'draft',                       // 複製は必ず下書きから（D-29）
     seriesId: seriesId,
     coverImage: source.coverImage || null,
-    attachments: [],
     createdAt: iso(now),
     updatedAt: iso(now)
   });
@@ -1453,8 +1556,7 @@ function blankEvent(categories, defaultFormFields) {
       return { id: uid('ff'), label: f.label, type: f.type, options: (f.options || []).slice(),
                required: !!f.required, order: i + 1 };
     }),
-    coverImage: null,
-    attachments: []
+    coverImage: null
   };
 }
 
@@ -1826,7 +1928,6 @@ function renderEventEdit(id) {
       var record = Object.assign({}, res[0] || {}, v, {
         id: id || uid('ev'),
         seriesId: draft.seriesId || null,
-        attachments: draft.attachments || [],
         createdAt: (res[0] && res[0].createdAt) || now,
         updatedAt: now
       });
@@ -2361,40 +2462,6 @@ function renderEntryList(eventId) {
   });
 }
 
-function renderMyTickets() {
-  return Promise.all([storeGetAllRaw(STORE_EVENTS), storeGetAllRaw(STORE_ENTRIES)])
-    .then(function (res) {
-      var events = res[0], entries = res[1];
-      var rows = [];
-      events.forEach(function (ev) {
-        (ev.ticketTypes || []).forEach(function (t) {
-          var sold = confirmedCount(entries, ev.id, t.id);
-          rows.push(el('tr', {}, [
-            el('td', {}, [el('a', { href: '#/events/' + ev.id, text: ev.title })]),
-            el('td', { text: t.name }),
-            el('td', { text: String(sold) }),
-            el('td', { text: String(t.capacity) }),
-            el('td', { text: String(Math.max(0, t.capacity - sold)) })
-          ]));
-        });
-      });
-      return el('div', {}, [
-        pageHead('マイチケット'),
-        el('div', { class: 'card' }, [
-          rows.length === 0
-            ? el('div', { class: 'empty', text: '券種がまだありません。' })
-            : el('table', {}, [
-                el('thead', {}, [el('tr', {}, [
-                  el('th', { text: 'イベント' }), el('th', { text: '券種' }),
-                  el('th', { text: '申込' }), el('th', { text: '定員' }), el('th', { text: '残席' })
-                ])]),
-                el('tbody', {}, rows)
-              ])
-        ])
-      ]);
-    });
-}
-
 /* ------------------------------------------------------------
    F-20 JSONエクスポート／インポート
    Blob はそのまま JSON 化できないため base64 に変換する（仕様書 6.6）
@@ -2419,21 +2486,17 @@ function jsonToBlob(value) {
   return new Blob([buf], { type: value.mime });
 }
 
-function exportAllData() {
+function exportAllData(includeFiles) {
   return Promise.all([
-    storeGetAllRaw(STORE_EVENTS), storeGetAllRaw(STORE_ENTRIES), storeGetAllRaw(STORE_SETTINGS)
+    storeGetAllRaw(STORE_EVENTS), storeGetAllRaw(STORE_ENTRIES),
+    storeGetAllRaw(STORE_SETTINGS), storeGetAllRaw(STORE_FILES)
   ]).then(function (res) {
-    var events = res[0], entries = res[1], settings = res[2];
-    // events の Blob（coverImage / attachments）を base64 化
+    var events = res[0], entries = res[1], settings = res[2], files = res[3];
+    // events の Blob（coverImage）を base64 化
     var evJobs = events.map(function (ev) {
       var copy = Object.assign({}, ev);
       return blobToJson(ev.coverImage).then(function (cover) {
         copy.coverImage = cover;
-        return Promise.all((ev.attachments || []).map(function (a) {
-          return blobToJson(a.blob).then(function (b) { return Object.assign({}, a, { blob: b }); });
-        }));
-      }).then(function (atts) {
-        copy.attachments = atts;
         return copy;
       });
     });
@@ -2446,16 +2509,25 @@ function exportAllData() {
           return { key: 'org', value: Object.assign({}, org, { logo: b[0], headerImage: b[1] }) };
         });
     });
-    return Promise.all([Promise.all(evJobs), Promise.all(stJobs)]).then(function (r) {
-      return {
-        format: 'event-manager-db',
-        schemaVersion: DB_VERSION,
-        exportedAt: iso(Date.now()),
-        events: r[0],
-        entries: entries,
-        settings: r[1]
-      };
-    });
+    // files は肥大化するため既定では含めない（5MB×20件で JSON.stringify が破綻する）
+    var fileJobs = includeFiles
+      ? files.map(function (f) {
+          return blobToJson(f.blob).then(function (b) { return Object.assign({}, f, { blob: b }); });
+        })
+      : [];
+    return Promise.all([Promise.all(evJobs), Promise.all(stJobs), Promise.all(fileJobs)])
+      .then(function (r) {
+        return {
+          format: 'event-manager-db',
+          schemaVersion: DB_VERSION,
+          exportedAt: iso(Date.now()),
+          includesFiles: !!includeFiles,
+          events: r[0],
+          entries: entries,
+          settings: r[1],
+          files: r[2]
+        };
+      });
   });
 }
 
@@ -2469,10 +2541,11 @@ function importAllData(payload) {
   var events = (payload.events || []).map(function (ev) {
     var copy = Object.assign({}, ev);
     copy.coverImage = jsonToBlob(ev.coverImage);
-    copy.attachments = (ev.attachments || []).map(function (a) {
-      return Object.assign({}, a, { blob: jsonToBlob(a.blob) });
-    });
+    delete copy.attachments;   // v1.16 で files ストアへ移行
     return copy;
+  });
+  var files = (payload.files || []).map(function (f) {
+    return Object.assign({}, f, { blob: jsonToBlob(f.blob) });
   });
   var settings = (payload.settings || []).map(function (row) {
     if (row.key !== 'org' || !row.value) return row;
@@ -2481,16 +2554,23 @@ function importAllData(payload) {
     }) };
   });
 
-  return Promise.all([store.clear(STORE_EVENTS), store.clear(STORE_ENTRIES), store.clear(STORE_SETTINGS)])
+  // 資料を含まない書き出しを読み込むときは、既存の資料を消さない
+  var clears = [store.clear(STORE_EVENTS), store.clear(STORE_ENTRIES), store.clear(STORE_SETTINGS)];
+  if (payload.includesFiles) clears.push(store.clear(STORE_FILES));
+
+  return Promise.all(clears)
     .then(function () {
       return Promise.all([].concat(
         events.map(function (e) { return store.put(STORE_EVENTS, e); }),
         (payload.entries || []).map(function (e) { return store.put(STORE_ENTRIES, e); }),
-        settings.map(function (r) { return store.put(STORE_SETTINGS, r); })
+        settings.map(function (r) { return store.put(STORE_SETTINGS, r); }),
+        files.map(function (f) { return store.put(STORE_FILES, f); })
       ));
     })
     .then(ensureSettings)
-    .then(function () { return { events: events.length, entries: (payload.entries || []).length }; });
+    .then(function () {
+      return { events: events.length, entries: (payload.entries || []).length, files: files.length };
+    });
 }
 
 /* ブラウザからのファイル保存（外部通信は行わない） */
@@ -2619,7 +2699,8 @@ function settingsGeneral(org) {
             logo: org.logo || null,
             headerImage: org.headerImage || null,
             intro: introF.__control.value
-          }).then(function () { toast('一般設定を保存しました。'); router(); });
+          }).then(refreshOrgCache)
+            .then(function () { toast('一般設定を保存しました。'); router(); });
         }
       })
     ])
@@ -2901,13 +2982,13 @@ function settingsPasscode() {
 function settingsData() {
   var status = el('div', { class: 'muted' });
   var importError = el('div', { class: 'field__error' });
+  var includeFilesCb = el('input', { type: 'checkbox' });   // 既定オフ
 
   function withBusy(label, fn) {
     status.textContent = label;
     return fn().then(function (r) {
       status.textContent = '完了しました。';
-      router();
-      return r;
+      return refreshOrgCache().then(function () { router(); return r; });
     }).catch(function (e) {
       status.textContent = '';
       importError.textContent = 'エラー: ' + (e && e.message || e);
@@ -2928,7 +3009,7 @@ function settingsData() {
       catch (e) { importError.textContent = 'エラー: JSON として読み込めませんでした'; return; }
       withBusy('読み込み中…', function () {
         return importAllData(payload).then(function (r) {
-          toast('イベント' + r.events + '件・申込' + r.entries + '件を読み込みました。');
+          toast('イベント' + r.events + '件・申込' + r.entries + '件・資料' + r.files + '件を読み込みました。');
           session.authenticated = false;
           navigate('/login');
         });
@@ -2942,11 +3023,16 @@ function settingsData() {
     el('div', { class: 'section' }, [
       el('h2', { class: 'section__title', text: 'バックアップ（F-20）' }),
       el('p', { class: 'section__note', text: 'データは端末内にしか存在せず、ブラウザの閲覧データを削除すると全消失します。JSONの書き出しが唯一のバックアップ手段です。定期的に実行してください。' }),
+      el('div', { class: 'field' }, [
+        el('label', { class: 'radio' }, [includeFilesCb, document.createTextNode('資料ファイル（F-34）を含める')]),
+        el('div', { class: 'field__help',
+          text: '資料を含めるとJSONが大きくなります（5MB×20件で100MB超）。既定はオフで、資料以外のすべてを書き出します。' })
+      ]),
       el('div', { class: 'stack' }, [
         el('button', {
           class: 'btn btn--primary', text: 'JSONを書き出す',
           onclick: function () {
-            exportAllData().then(function (payload) {
+            exportAllData(includeFilesCb.checked).then(function (payload) {
               var d = new Date();
               var p = function (n) { return String(n).padStart(2, '0'); };
               downloadFile('event-manager-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '.json',
@@ -3008,12 +3094,20 @@ function publicShell(title, children, org, showBanner) {
       ? 'background-image:url(' + blobUrl(org.headerImage) + ');background-size:cover;background-position:center'
       : 'background:var(--color-surface-sub)'
   }) : null;
+  var path = currentPath();
+  function navLink(href, label, match) {
+    return el('a', { href: '#' + href, text: label,
+      class: match(path) ? 'is-active' : '' });
+  }
+  var nav = el('nav', { class: 'public__nav' }, [
+    navLink('/public', 'イベントを探す', function (p) { return p.indexOf('/public') === 0; }),
+    navLink('/lookup', 'マイチケット', function (p) { return p === '/lookup'; }),
+    navLink('/login', '主催者ログイン', function (p) { return p === '/login'; })
+  ]);
+
   return el('div', { class: 'public' }, [
     banner,
-    el('div', { class: 'public__head' }, [
-      brand,
-      el('a', { class: 'muted', href: '#/lookup', text: '申込を確認する' })
-    ]),
+    el('div', { class: 'public__head' }, [brand, nav]),
     org.intro ? el('p', { class: 'muted', style: 'white-space:pre-wrap', text: org.intro }) : null,
     el('h1', { class: 'pagehead__title', text: title })
   ].filter(Boolean).concat(children || []));
@@ -3084,7 +3178,16 @@ function renderPublicList() {
         ]);
       });
 
+      var lead = el('div', { class: 'public__lead' }, [
+        el('h2', { class: 'section__title',
+          text: (org.name || '当社') + 'が主催するイベントの申込ページです' }),
+        el('p', { class: 'muted', style: 'margin:0',
+          text: '参加したいイベントを選んでお申し込みください。お申込み後に発行される受付コードとメールアドレスで、'
+              + '「マイチケット」から申込内容の確認とキャンセルができます。ログインや会員登録は不要です。' })
+      ]);
+
       return publicShell('開催予定のイベント', [
+        lead,
         el('div', { class: 'toolbar' }, [qInput, catSelect])
       ].concat(open.length === 0
         ? [el('div', { class: 'card' }, [el('div', { class: 'empty',
@@ -3445,14 +3548,22 @@ function renderApplyDone(eventId) {
           el('div', { text: '受付コード' }),
           el('div', { style: 'font-size:var(--font-size-2xl);font-weight:var(--font-weight-bold);letter-spacing:2px', text: code })
         ]),
-        el('p', { class: 'muted', text: '当日の受付とお申込みの確認に使います。このコードを必ず控えてください。自動でメールは送信されません。' }),
+        el('div', { class: 'field__help' }, [
+          el('div', { text: '受付コードは次の3つに使います。' }),
+          el('ul', {}, [
+            el('li', { text: '当日の受付（会場でこのコードをお伝えください）' }),
+            el('li', { text: 'マイチケットでの申込内容の確認' }),
+            el('li', { text: 'お申込みのキャンセル' })
+          ]),
+          el('div', { text: '確認メールは自動送信されません。このコードを必ず控えてください。' })
+        ]),
         el('table', {}, [el('tbody', {}, [
           statRow('開催日時', formatDateTime(ev.startAt) + ' 〜 ' + formatDateTime(ev.endAt)),
           statRow('場所', ev.format === 'online' ? (ev.onlineUrl || '—') : (ev.venue || '—'))
         ])]),
         el('div', { class: 'formbar' }, [
-          el('a', { class: 'btn', href: '#/lookup', text: '申込内容を確認する' }),
-          el('a', { class: 'btn', href: '#/public', text: 'イベント一覧へ' })
+          el('a', { class: 'btn btn--primary', href: '#/lookup', text: 'マイチケットで確認する' }),
+          el('a', { class: 'btn', href: '#/public', text: 'イベントを探す' })
         ])
       ])
     ], org);
@@ -3463,99 +3574,253 @@ function renderApplyDone(eventId) {
    S-11 申込照会／電子チケット（F-25 / F-24 / F-13）
    受付コード＋メールアドレスの照合で本人確認を代替する
    ------------------------------------------------------------ */
-var lookupResult = null;
+/* ------------------------------------------------------------
+   S-11 マイチケット（F-25 / F-24 / F-13）
+   受付コード＋メールアドレスで照合し、同一メールの申込を全件表示する。
+   メールアドレスのみでの一覧表示は行わない（他人の申込を閲覧できてしまうため）
+   ------------------------------------------------------------ */
+var lookupSession = null;   // { email }（メモリ上のみ。再読込で解除）
 
 function renderLookup() {
   return getSetting('org').then(function (org) {
     org = org || {};
-    var codeF = field({ label: '受付コード', required: true, help: '申込完了画面に表示された8桁の英数字です。' },
-      textInput({ placeholder: '例: H7K2M9XQ', maxlength: '8' }));
-    var mailF = field({ label: 'メールアドレス', required: true, help: 'お申込み時に入力したメールアドレスです。' },
-      el('input', { type: 'email', placeholder: '例: taro.yamada@example.com' }));
-    var errorHost = el('div');
-    var resultHost = el('div');
+    var host = el('div');
 
-    function search() {
-      errorHost.textContent = '';
-      resultHost.textContent = '';
-      setFieldError(codeF, ''); setFieldError(mailF, '');
-      var code = codeF.__control.value.trim().toUpperCase();
-      var email = mailF.__control.value.trim();
-      if (!code) { setFieldError(codeF, MSG.required('受付コード')); return; }
-      if (!email) { setFieldError(mailF, MSG.required('メールアドレス')); return; }
+    function showForm(message) {
+      host.textContent = '';
+      var codeF = field({ label: '受付コード', required: true, help: '申込完了画面に表示された8桁の英数字です。' },
+        textInput({ placeholder: '例: H7K2M9XQ', maxlength: '8' }));
+      var mailF = field({ label: 'メールアドレス', required: true, help: 'お申込み時に入力したメールアドレスです。' },
+        el('input', { type: 'email', placeholder: '例: taro.yamada@example.com' }));
+      var errorHost = el('div');
+      if (message) errorHost.appendChild(el('div', { class: 'alert alert--danger', text: message }));
 
-      store.byIndex(STORE_ENTRIES, 'code', code).then(function (hits) {
-        var entry = hits.filter(function (e) {
-          return e.email.toLowerCase() === email.toLowerCase();
-        })[0];
-        if (!entry) {
-          errorHost.appendChild(el('div', { class: 'alert alert--danger',
-            text: '受付コードとメールアドレスの組み合わせが見つかりません。入力内容をご確認ください。' }));
-          return;
-        }
-        return store.get(STORE_EVENTS, entry.eventId).then(function (ev) {
-          lookupResult = { entry: entry, event: ev };
-          resultHost.appendChild(lookupCard(entry, ev, search));
+      function search() {
+        errorHost.textContent = '';
+        setFieldError(codeF, ''); setFieldError(mailF, '');
+        var code = codeF.__control.value.trim().toUpperCase();
+        var email = mailF.__control.value.trim();
+        if (!code) { setFieldError(codeF, MSG.required('受付コード')); return; }
+        if (!email) { setFieldError(mailF, MSG.required('メールアドレス')); return; }
+
+        store.byIndex(STORE_ENTRIES, 'code', code).then(function (hits) {
+          var match = hits.filter(function (e) {
+            return e.email.toLowerCase() === email.toLowerCase();
+          })[0];
+          if (!match) {
+            errorHost.appendChild(el('div', { class: 'alert alert--danger',
+              text: '受付コードとメールアドレスの組み合わせが見つかりません。入力内容をご確認ください。' }));
+            return;
+          }
+          lookupSession = { email: match.email };
+          showList();
         });
-      });
-    }
+      }
 
-    return publicShell('申込の確認', [
-      el('div', { class: 'card' }, [
-        el('p', { class: 'muted', text: '受付コードとメールアドレスで、お申込み内容の確認とキャンセルができます。' }),
+      codeF.__control.addEventListener('keydown', function (e) { if (e.key === 'Enter') search(); });
+      mailF.__control.addEventListener('keydown', function (e) { if (e.key === 'Enter') search(); });
+
+      host.appendChild(el('div', { class: 'card' }, [
+        el('p', { class: 'muted', text: '受付コードとメールアドレスで照合すると、そのメールアドレスの申込をまとめて確認できます。' }),
         codeF, mailF, errorHost,
         el('div', { class: 'formbar' }, [
           el('button', { class: 'btn btn--primary', text: '照会する', onclick: search })
         ])
-      ]),
-      resultHost
-    ], org);
+      ]));
+    }
+
+    function showList() {
+      host.textContent = '';
+      var email = lookupSession.email;
+      store.byIndex(STORE_ENTRIES, 'email', email).then(function (mine) {
+        return Promise.all(mine.map(function (en) {
+          return store.get(STORE_EVENTS, en.eventId).then(function (ev) {
+            return { entry: en, event: ev };
+          });
+        }));
+      }).then(function (rows) {
+        // 開催が近い順。終了済みは末尾へ
+        rows.sort(function (a, b) {
+          var fa = a.event ? isFinished(a.event) : true;
+          var fb = b.event ? isFinished(b.event) : true;
+          if (fa !== fb) return fa ? 1 : -1;
+          var ta = a.event ? new Date(a.event.startAt) : 0;
+          var tb = b.event ? new Date(b.event.startAt) : 0;
+          return ta - tb;
+        });
+
+        host.appendChild(el('div', { class: 'card' }, [
+          el('div', { class: 'stack' }, [
+            el('span', { text: email + ' の申込 ' + rows.length + ' 件' }),
+            el('button', {
+              class: 'btn', text: '別のコードで照会',
+              onclick: function () { lookupSession = null; showForm(); }
+            })
+          ])
+        ]));
+
+        if (rows.length === 0) {
+          host.appendChild(el('div', { class: 'card' }, [
+            el('div', { class: 'empty', text: 'お申込みはありません。' })
+          ]));
+          return;
+        }
+        rows.forEach(function (r) {
+          host.appendChild(ticketCard(r.entry, r.event, showList));
+        });
+      });
+    }
+
+    if (lookupSession) showList(); else showForm();
+
+    return publicShell('マイチケット', [host], org);
   });
 }
 
-function lookupCard(entry, ev, refresh) {
+function ticketCard(entry, ev, refresh) {
   var ticket = ev ? (ev.ticketTypes || []).filter(function (t) { return t.id === entry.ticketTypeId; })[0] : null;
-  var stateBadge = entry.state === 'confirmed'
-    ? el('span', { class: 'badge badge--success', text: '参加確定' })
-    : el('span', { class: 'badge badge--danger', text: 'キャンセル済み' });
+  var finished = ev ? isFinished(ev) : true;
+
+  var badge;
+  if (entry.state === 'cancelled') badge = el('span', { class: 'badge badge--danger', text: 'キャンセル済み' });
+  else if (finished) badge = el('span', { class: 'badge badge--neutral', text: '終了' });
+  else badge = el('span', { class: 'badge badge--success', text: '参加確定' });
 
   var actions = [];
+  var note = null;
   if (entry.state === 'confirmed') {
-    if (entry.checkedInAt) {
-      // D-10 チェックイン済みのキャンセルは主催者側のみ
-      actions.push(el('span', { class: 'muted',
-        text: '受付済みのためこの画面からはキャンセルできません。主催者へご連絡ください。' }));
+    if (finished) {
+      // 終了済みイベントは履歴として表示するのみ（キャンセル操作は不可）
+      note = '終了したイベントのため、この画面からの操作はできません。';
+    } else if (entry.checkedInAt) {
+      note = '受付済みのためこの画面からはキャンセルできません。主催者へご連絡ください。';  // D-10
     } else {
       actions.push(el('button', {
         class: 'btn btn--danger', text: 'キャンセルする',
         onclick: function () {
-          if (!confirm('このお申込みをキャンセルします。よろしいですか？')) return;
+          if (!confirm('「' + (ev ? ev.title : '') + '」のお申込みをキャンセルします。よろしいですか？')) return;
           var now = iso(Date.now());
           store.put(STORE_ENTRIES, Object.assign({}, entry, {
             state: 'cancelled', cancelledAt: now, updatedAt: now
-          })).then(function () {
-            toast('キャンセルしました。');
-            refresh();
-          });
+          })).then(function () { toast('キャンセルしました。'); refresh(); });
         }
       }));
     }
   }
+  if (ev && entry.state === 'confirmed' && !finished) {
+    actions.push(el('a', { class: 'btn', href: '#/public/' + ev.id, text: 'イベントページ' }));
+  }
 
   return el('div', { class: 'card' }, [
-    el('h2', { class: 'section__title', text: ev ? ev.title : '（削除されたイベント）' }),
+    el('div', { class: 'stack' }, [
+      el('h2', { class: 'section__title', text: ev ? ev.title : '（削除されたイベント）' }),
+      badge
+    ]),
     el('table', {}, [el('tbody', {}, [
-      el('tr', {}, [el('th', { text: '状態' }), el('td', {}, [stateBadge])]),
       statRow('受付コード', entry.code),
-      statRow('氏名', entry.name),
-      statRow('メールアドレス', entry.email),
       statRow('券種', ticket ? ticket.name : '—'),
       ev ? statRow('開催日時', formatDateTime(ev.startAt) + ' 〜 ' + formatDateTime(ev.endAt)) : null,
       ev ? statRow('場所', ev.format === 'online' ? (ev.onlineUrl || '—') : (ev.venue || '—')) : null,
+      statRow('氏名', entry.name),
       statRow('受付', entry.checkedInAt ? formatDateTime(entry.checkedInAt) + ' に受付済み' : '未受付')
     ].filter(Boolean))]),
-    el('div', { class: 'formbar' }, actions)
-  ]);
+    note ? el('p', { class: 'muted', text: note }) : null,
+    actions.length > 0 ? el('div', { class: 'formbar' }, actions) : null
+  ].filter(Boolean));
+}
+
+/* ------------------------------------------------------------
+   S-16 資料（F-34 運用資料の管理）
+   イベント単位ではなく組織全体の資料置き場
+   ------------------------------------------------------------ */
+function fileExtOf(name) {
+  var m = /\.([A-Za-z0-9]+)$/.exec(name || '');
+  return m ? m[1].toLowerCase() : '';
+}
+
+function formatBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function renderFiles() {
+  return storeGetAllRaw(STORE_FILES).then(function (files) {
+    files.sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+
+    var noteF = field({ label: '説明', help: '何の資料かがわかるように書いておくと、あとから探しやすくなります。' },
+      textInput({ placeholder: '例: 第1回の進行台本（最終版）', maxlength: '200' }));
+    var input = el('input', { type: 'file', accept: '.pdf,.png,.jpg,.jpeg,.xlsx,.docx' });
+    var fileF = field({ label: '資料ファイル', required: true,
+      help: 'pdf / png / jpeg / xlsx / docx、1ファイル5MBまで、' + MAX_FILES + '件まで。画像も縮小せず原本のまま保存します。' }, input);
+
+    function add() {
+      setFieldError(fileF, '');
+      var f = input.files && input.files[0];
+      if (!f) { setFieldError(fileF, MSG.required('資料ファイル')); return; }
+      if (files.length >= MAX_FILES) { setFieldError(fileF, MSG.fileTooMany); return; }   // D-40
+      var ext = fileExtOf(f.name);
+      if (FILE_EXT.indexOf(ext) < 0 && FILE_MIME.indexOf(f.type) < 0) {
+        setFieldError(fileF, MSG.fileFormat); return;
+      }
+      if (f.size > FILE_MAX_BYTES) { setFieldError(fileF, MSG.fileTooLarge); return; }
+      store.put(STORE_FILES, {
+        id: uid('file'),
+        name: f.name.slice(0, 100),
+        note: noteF.__control.value.trim(),
+        mime: f.type || '',
+        size: f.size,
+        blob: f,                       // リサイズせず原本を保持する
+        createdAt: iso(Date.now())
+      }).then(function () { toast('資料を登録しました。'); router(); });
+    }
+
+    var rows = files.map(function (f) {
+      return el('tr', {}, [
+        el('td', { text: f.name }),
+        el('td', { text: f.note || '—' }),
+        el('td', { text: formatBytes(f.size) }),
+        el('td', { text: formatDateTime(f.createdAt) }),
+        el('td', {}, [el('div', { class: 'stack' }, [
+          el('button', { class: 'btn', text: 'ダウンロード',
+            onclick: function () { downloadFile(f.name, f.blob); } }),
+          el('button', { class: 'btn btn--danger', text: '削除',
+            onclick: function () {
+              if (!confirm('「' + f.name + '」を削除します。よろしいですか？')) return;
+              store.remove(STORE_FILES, f.id).then(function () { toast('資料を削除しました。'); router(); });
+            } })
+        ])])
+      ]);
+    });
+
+    return el('div', {}, [
+      pageHead('資料'),
+      el('div', { class: 'card' }, [
+        el('p', { class: 'muted', text: '進行台本・会場図・配布資料など、イベント運営に使う資料の置き場です。イベント単位ではなく組織全体で共有します。' }),
+        el('div', { class: 'alert', style: 'background:var(--color-warning-bg);color:var(--color-warning-text)',
+          text: 'ファイルはこの端末のブラウザ内にのみ保存されます。他のメンバーとは共有されません。受け渡しにはJSONの書き出し（設定・データ管理）を使ってください。' }),
+        files.length === 0
+          ? el('div', { class: 'empty', text: '資料はまだ登録されていません。' })
+          : el('table', {}, [
+              el('thead', {}, [el('tr', {}, [
+                el('th', { text: 'ファイル名' }), el('th', { text: '説明' }),
+                el('th', { text: 'サイズ' }), el('th', { text: '登録日時' }), el('th', { text: '' })
+              ])]),
+              el('tbody', {}, rows)
+            ]),
+        el('div', { class: 'pager' }, [
+          el('span', { class: 'muted', text: files.length + ' / ' + MAX_FILES + ' 件' })
+        ])
+      ]),
+      el('div', { class: 'card' }, [
+        el('h2', { class: 'section__title', text: '資料を登録' }),
+        fileF, noteF,
+        el('div', { class: 'formbar' }, [
+          el('button', { class: 'btn btn--primary', text: '登録', onclick: add })
+        ])
+      ])
+    ]);
+  });
 }
 
 /* S-14 エラー */
@@ -3575,6 +3840,7 @@ function boot() {
   appEl = document.getElementById('app');
   window.addEventListener('hashchange', router);
   ensureSettings()
+    .then(refreshOrgCache)
     .then(function () { router(); })
     .catch(function (err) {
       console.error(err);
