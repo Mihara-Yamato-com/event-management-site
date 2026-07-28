@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>イベント主催・管理サービス</title>
+<title>ACTIO — イベント主催・管理サービス</title>
 
 <style>
 /* ============================================================
@@ -19,6 +19,10 @@
   --color-accent:        #1A1A18;
   --color-accent-text:   #FFFFFF;
 
+  /* ロゴマーク（Issue #2 画像1） */
+  --color-mark-facet:    #2C3440;
+  --color-mark-accent:   #8DA5C4;
+
   /* セマンティック */
   --color-success-bg:    #E4F1E5;  --color-success-text: #2E7D40;
   --color-warning-bg:    #FBF1DA;  --color-warning-text: #96792A;
@@ -35,7 +39,7 @@
   --space-lg: 16px;  --space-xl: 24px;  --space-2xl: 32px; --space-3xl: 48px;
 
   /* 角丸 */
-  --radius-sm: 4px;  --radius-md: 6px;  --radius-full: 9999px;
+  --radius-sm: 4px;  --radius-md: 6px;  --radius-lg: 10px;  --radius-full: 9999px;
 
   /* タイポグラフィ */
   --font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif;
@@ -75,40 +79,91 @@ a { color: inherit; }
 .sidebar {
   width: var(--sidebar-width);
   flex: 0 0 var(--sidebar-width);
-  background: var(--color-surface-sub);
+  background: var(--color-surface);
   border-right: var(--border);
-  padding: var(--space-xl) 0;
+  padding: var(--space-xl) var(--space-md);
   position: sticky;
   top: 0;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar__brand {
-  padding: 0 var(--space-lg) var(--space-xl);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
+  padding: 0 var(--space-sm) var(--space-2xl);
+  text-decoration: none;
+  color: inherit;
+  display: block;
 }
 
-.sidebar__nav { display: flex; flex-direction: column; }
+.logo { display: inline-flex; align-items: center; gap: var(--space-sm); }
+.logo__word {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: .22em;
+  line-height: 1;
+}
+
+.sidebar__nav { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; }
 
 .sidebar__link {
-  padding: var(--space-sm) var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
   text-decoration: none;
-  color: var(--color-text);
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
-.sidebar__link:hover { background: var(--color-border); }
+.sidebar__link:hover { background: var(--color-surface-sub); color: var(--color-text); }
 .sidebar__link--active {
-  background: var(--color-accent);
-  color: var(--color-accent-text);
+  background: var(--color-surface-sub);
+  color: var(--color-text);
   font-weight: var(--font-weight-medium);
 }
 
 .sidebar__foot {
-  position: absolute;
-  bottom: var(--space-xl);
-  left: 0; right: 0;
-  padding: 0 var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-sm) 0;
+  border-top: var(--border);
+  min-width: 0;
+}
+.sidebar__org { min-width: 0; }
+.sidebar__orgname {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar__orgnote { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+.avatar {
+  width: 28px; height: 28px;
+  flex: 0 0 28px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  background: var(--color-surface-sub);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar--text {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+/* 画像2 の「FEATURED EVENT」のような小さな英字ラベル */
+.eyebrow {
+  font-size: var(--font-size-xs);
+  letter-spacing: .18em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--space-sm);
 }
 
 .mainwrap { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
@@ -138,8 +193,22 @@ a { color: inherit; }
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
   text-decoration: none;
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
 }
-.apphead__link:hover { color: var(--color-text); text-decoration: underline; }
+.apphead__link:hover { color: var(--color-text); }
+.apphead__link.is-active {
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  border-bottom-color: var(--color-accent);
+}
+.apphead__brand--link { text-decoration: none; color: inherit; }
+.apphead__sep {
+  width: 1px; height: 18px;
+  background: var(--color-border);
+  display: inline-block;
+  margin: 0 var(--space-xs);
+}
 
 .main {
   flex: 1 1 auto;
@@ -160,16 +229,90 @@ a { color: inherit; }
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   margin: 0;
+  letter-spacing: .01em;
 }
 
 /* ---------- 部品 ---------- */
 .card {
   background: var(--color-surface);
   border: var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2xl);
   margin-bottom: var(--space-lg);
+}
+
+/* 画像2 の数値タイル */
+.hero { display: flex; gap: var(--space-2xl); align-items: stretch; padding: 0; overflow: hidden; }
+.hero__body {
+  flex: 1 1 auto;
+  padding: var(--space-3xl) var(--space-2xl);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+.hero__title {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.3;
+  margin: 0;
+}
+.hero__desc { margin: 0; }
+.hero__image {
+  flex: 0 0 42%;
+  object-fit: cover;
+  min-height: 240px;
+  background: var(--color-surface-sub);
+}
+.hero__image--empty { display: flex; align-items: flex-end; justify-content: flex-end; }
+.hero__date {
+  padding: var(--space-2xl);
+  text-align: right;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.5;
+}
+
+.tiles {
+  display: flex;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-lg);
+}
+.tile {
+  flex: 1 1 200px;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+}
+.tile__label {
+  font-size: var(--font-size-xs);
+  letter-spacing: .12em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--space-sm);
+}
+.tile__value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+}
+.tile__note { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-top: var(--space-xs); }
+
+/* 一覧行のサムネイル */
+.rowthumb {
+  width: 56px; height: 36px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sub);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
 }
 
 .btn {
@@ -195,9 +338,11 @@ a { color: inherit; }
 table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
 th, td {
   text-align: left;
-  padding: var(--space-md);
+  padding: var(--space-md) var(--space-md);
   border-bottom: var(--border);
+  vertical-align: middle;
 }
+tbody tr:last-child td { border-bottom: none; }
 th { color: var(--color-text-muted); font-weight: var(--font-weight-medium); }
 tbody tr:hover { background: var(--color-surface-sub); }
 
@@ -299,6 +444,32 @@ input[type=datetime-local] { max-width: 260px; }
 }
 .subcard__title { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
 
+.steps {
+  display: flex;
+  gap: var(--space-xs);
+  list-style: none;
+  margin: 0 0 var(--space-xl);
+  padding: 0;
+  flex-wrap: wrap;
+}
+.steps__item {
+  font-size: var(--font-size-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border: var(--border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  background: var(--color-surface);
+}
+.steps__item:hover { background: var(--color-surface-sub); }
+.steps__item.is-current {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  border-color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
+}
+.steps__item.is-done { color: var(--color-text); }
+
 .formbar {
   position: sticky;
   bottom: 0;
@@ -318,6 +489,41 @@ input[type=datetime-local] { max-width: 260px; }
 }
 .alert--danger { background: var(--color-danger-bg); color: var(--color-danger-text); }
 .alert ul { margin: var(--space-xs) 0 0; padding-left: var(--space-xl); }
+
+.chartrow { display: flex; gap: var(--space-2xl); align-items: center; flex-wrap: wrap; }
+.legend { display: flex; flex-direction: column; gap: var(--space-sm); }
+.legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+}
+.legend__swatch {
+  width: 12px; height: 12px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  flex: 0 0 12px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+  margin-top: var(--space-sm);
+}
+.chips__label { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.chip {
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
+  border: var(--border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sub);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.chip:hover { background: var(--color-border); }
 
 .toolbar {
   display: flex;
@@ -385,29 +591,46 @@ input[type=datetime-local] { max-width: 260px; }
 }
 
 /* ---------- 公開側（管理画面と別レイアウト） ---------- */
-.public { max-width: 960px; margin: 0 auto; padding: var(--space-2xl) var(--space-xl); }
-.public__head {
-  border-bottom: var(--border);
-  padding-bottom: var(--space-lg);
-  margin-bottom: var(--space-xl);
+.publicwrap { min-height: 100vh; display: flex; flex-direction: column; }
+.public {
+  max-width: var(--content-max-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-2xl);
+}
+.eventcard {
+  display: flex;
+  gap: var(--space-lg);
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  text-decoration: none;
+  color: inherit;
+}
+.eventcard:hover { box-shadow: var(--shadow-md); }
+.eventcard__thumb {
+  width: 200px;
+  height: 112px;               /* 16:9 */
+  flex: 0 0 200px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sub);
+}
+.eventcard__thumb--empty {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-lg);
-}
-.public__nav { display: flex; gap: var(--space-lg); }
-.public__nav a {
-  font-size: var(--font-size-sm);
+  justify-content: center;
   color: var(--color-text-muted);
-  text-decoration: none;
-  padding-bottom: 2px;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
 }
-.public__nav a:hover { color: var(--color-text); }
-.public__nav a.is-active {
-  color: var(--color-text);
-  font-weight: var(--font-weight-medium);
-  border-bottom: 2px solid var(--color-accent);
-}
+.eventcard__body { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; }
+.eventcard__title { font-size: var(--font-size-lg); font-weight: var(--font-weight-medium); }
+.eventcard__meta { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+
 .public__lead {
   background: var(--color-surface);
   border: var(--border);
@@ -415,7 +638,6 @@ input[type=datetime-local] { max-width: 260px; }
   padding: var(--space-xl);
   margin-bottom: var(--space-xl);
 }
-.public__brand { font-weight: var(--font-weight-bold); font-size: var(--font-size-lg); text-decoration: none; }
 .public__banner {
   height: 140px;
   border-radius: var(--radius-md);
@@ -450,6 +672,7 @@ input[type=datetime-local] { max-width: 260px; }
 /* ------------------------------------------------------------
    定数
    ------------------------------------------------------------ */
+var SERVICE_NAME = 'ACTIO';         // サービス名（主催組織名 settings.org.name とは別）
 var DB_NAME = 'event-manager-db';   // 仕様書 6.1（一般名を避ける）
 var DB_VERSION = 2;                 // v1.16 で files ストアを追加（1→2）
 var STORE_EVENTS = 'events';
@@ -567,6 +790,18 @@ function storeOne(name, method, key) {
 }
 
 /* settings は key-value（仕様書 6.4） */
+/* 参加者パスワード（F-25）。メールアドレスをキーにした簡易な保管
+   組織パスコードと同様、クライアント内の照合であり実セキュリティは持たない */
+function getParticipants() {
+  return getSetting('participants').then(function (m) { return m || {}; });
+}
+function setParticipantPassword(email, password) {
+  return getParticipants().then(function (m) {
+    m[email.toLowerCase()] = password;
+    return setSetting('participants', m);
+  });
+}
+
 function getSetting(key) {
   return store.get(STORE_SETTINGS, key).then(function (row) {
     return row ? row.value : undefined;
@@ -603,6 +838,61 @@ function formatDateTime(isoStr) {
   var p = function (n) { return String(n).padStart(2, '0'); };
   return d.getFullYear() + '/' + p(d.getMonth() + 1) + '/' + p(d.getDate()) +
     ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+var SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgEl(tag, attrs) {
+  var node = document.createElementNS(SVG_NS, tag);
+  Object.keys(attrs || {}).forEach(function (k) { node.setAttribute(k, attrs[k]); });
+  return node;
+}
+
+/* ACTIO のロゴマーク（Issue #2 の画像1）
+   外部画像URLは制約7で参照できず、元画像は背景付きのモックのため SVG で描き起こす。
+   濃色の峰と、淡いスチールブルーの右面の2面構成 */
+function actioMark(size) {
+  var svg = svgEl('svg', {
+    viewBox: '0 0 64 64', width: size, height: size,
+    'aria-hidden': 'true', focusable: 'false'
+  });
+  svg.appendChild(svgEl('polygon', { points: '34,5 4,59 34,59', fill: 'var(--color-accent)' }));
+  svg.appendChild(svgEl('polygon', { points: '34,31 21,59 34,59', fill: 'var(--color-mark-facet)' }));
+  svg.appendChild(svgEl('polygon', { points: '39,21 60,59 39,59', fill: 'var(--color-mark-accent)' }));
+  return svg;
+}
+
+/* ロゴ（マーク＋ワードマーク）。ワードマークは字間を広くとる */
+function actioLogo(opts) {
+  opts = opts || {};
+  var wrap = el('span', { class: 'logo' });
+  wrap.appendChild(actioMark(opts.size || 24));
+  wrap.appendChild(el('span', { class: 'logo__word', text: SERVICE_NAME }));
+  return wrap;
+}
+
+/* サイドバー用アイコン（画像2 のトーンに合わせた線画） */
+var NAV_ICONS = {
+  home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
+  calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+  folder: 'M3 6h6l2 2h10v11H3z',
+  gear: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M4 12H2m20 0h-2M12 4V2m0 20v-2M6 6 4.5 4.5M19.5 19.5 18 18M18 6l1.5-1.5M4.5 19.5 6 18'
+};
+
+function navIcon(key) {
+  var svg = svgEl('svg', {
+    viewBox: '0 0 24 24', width: 18, height: 18, fill: 'none',
+    stroke: 'currentColor', 'stroke-width': '1.6',
+    'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    'aria-hidden': 'true', focusable: 'false'
+  });
+  svg.appendChild(svgEl('path', { d: NAV_ICONS[key] }));
+  return svg;
+}
+
+/* 画像2 の小さな英字ラベル（FEATURED EVENT 等）に相当する見出し */
+function eyebrow(text) {
+  return el('div', { class: 'eyebrow', text: text });
 }
 
 /* DOM 生成は textContent を基本とする（CLAUDE.md §8） */
@@ -693,6 +983,43 @@ function setFieldError(fieldNode, message) {
 }
 
 function textInput(attrs) { return el('input', Object.assign({ type: 'text' }, attrs)); }
+
+/* 検索ボックス（日本語入力対応）
+   input のたびに再描画すると、IME の変換確定前に入力欄が作り直されて
+   composition が壊れ、子音だけが残る（「ハンズオン」→「ｈあｎｎｚうおｎｎ」）。
+   変換中は再描画せず、確定後にまとめて反映する。 */
+var SEARCH_DEBOUNCE_MS = 250;
+
+function searchInput(attrs, state, apply) {
+  var input = textInput(attrs);
+  var composing = false;
+  var timer = null;
+
+  function schedule() {
+    if (composing) return;                       // 変換中は再描画しない
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function () {
+      timer = null;
+      state.caret = input.selectionStart;
+      state.focus = true;
+      apply(input.value);
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  input.addEventListener('compositionstart', function () { composing = true; });
+  input.addEventListener('compositionend', function () { composing = false; schedule(); });
+  input.addEventListener('input', schedule);
+
+  // 再描画後にフォーカスとキャレット位置を復元する
+  if (state.focus) {
+    setTimeout(function () {
+      input.focus();
+      var pos = (state.caret === undefined || state.caret === null) ? input.value.length : state.caret;
+      try { input.setSelectionRange(pos, pos); } catch (e) { /* 型により未対応 */ }
+    }, 0);
+  }
+  return input;
+}
 
 function selectInput(options, value, attrs) {
   var sel = el('select', attrs || {});
@@ -843,6 +1170,7 @@ function ensureSettings() {
     mailTemplates: { invite: '', reminder: '', announce: '' },         // F-19 / F-29
     sendLog: [],                                                       // F-19
     passcode: null,                                                    // F-27（初回起動時に設定）
+    participants: {},                                                  // F-25 参加者パスワード（平文・メールをキー）
     uiState: { lastTab: null },                                        // localStorage を使わないための代替
     schemaVersion: DB_VERSION
   };
@@ -1109,10 +1437,10 @@ function router() {
    ------------------------------------------------------------ */
 /* サイドバーはナビゲーション専用（仕様書 5.3） */
 var ADMIN_NAV = [
-  { path: '/',         label: 'ダッシュボード' },
-  { path: '/events',   label: 'イベント' },
-  { path: '/files',    label: '資料' },
-  { path: '/settings', label: '設定・データ管理' }
+  { path: '/',         label: 'ダッシュボード',   icon: 'home' },
+  { path: '/events',   label: 'イベント',         icon: 'calendar' },
+  { path: '/files',    label: '資料',             icon: 'folder' },
+  { path: '/settings', label: '設定・データ管理', icon: 'gear' }
 ];
 
 var ADMIN_SCREENS = ['S-01', 'S-02', 'S-03', 'S-04', 'S-08', 'S-09', 'S-16'];
@@ -1132,21 +1460,29 @@ function renderShell(screenId, contentNode) {
     var active = item.path === '/' ? path === '/' : path.indexOf(item.path) === 0;
     return el('a', {
       class: 'sidebar__link' + (active ? ' sidebar__link--active' : ''),
-      href: '#' + item.path,
-      text: item.label
-    });
+      href: '#' + item.path
+    }, [navIcon(item.icon), el('span', { text: item.label })]);
   }));
 
+  // 画像2 に倣い、サイドバー下部で運用中の組織を示す
+  var orgInitial = (session.orgName || '?').slice(0, 1);
   var sidebar = el('aside', { class: 'sidebar' }, [
-    el('div', { class: 'sidebar__brand', text: 'イベント管理' }),
-    nav
+    el('a', { class: 'sidebar__brand', href: '#/' }, [actioLogo({})]),
+    nav,
+    el('div', { class: 'sidebar__foot' }, [
+      session.orgLogoUrl
+        ? el('img', { class: 'avatar', src: session.orgLogoUrl, alt: '' })
+        : el('span', { class: 'avatar avatar--text', text: orgInitial }),
+      el('div', { class: 'sidebar__org' }, [
+        el('div', { class: 'sidebar__orgname', text: session.orgName || '組織名未設定' }),
+        el('div', { class: 'sidebar__orgnote', text: '主催者' })
+      ])
+    ])
   ]);
 
   /* ヘッダー: 左＝ロゴ＋組織名 ／ 右＝外部遷移・セッション操作（仕様書 5.3） */
   var headBrand = el('div', { class: 'apphead__brand' }, [
-    session.orgLogoUrl
-      ? el('img', { src: session.orgLogoUrl, alt: '', class: 'apphead__logo' }) : null,
-    el('span', { text: session.orgName || '組織名未設定' })
+    el('span', { class: 'muted', text: session.orgName || '組織名未設定' })
   ]);
   var header = el('header', { class: 'apphead' }, [
     headBrand,
@@ -1221,18 +1557,25 @@ function renderLogin() {
 
     input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
 
-    return el('div', { class: 'login' }, [
-      el('div', { class: 'card' }, [
-        el('h1', { class: 'pagehead__title', text: isFirstRun ? 'パスコードの初期設定' : 'ログイン' }),
-        el('p', { class: 'muted', text: isFirstRun
-          ? '初回起動です。管理画面に入るためのパスコードを設定してください。'
-          : '管理画面に入るにはパスコードを入力してください。' }),
-        input,
-        error,
-        el('button', { class: 'btn btn--primary', text: isFirstRun ? '設定して開始' : 'ログイン', onclick: submit })
+    return el('div', { class: 'publicwrap' }, [
+      el('header', { class: 'apphead' }, [
+        el('a', { class: 'apphead__brand apphead__brand--link', href: '#/public' },
+          [actioLogo({ size: 22 })]),
+        el('nav', { class: 'apphead__actions' }, [
+          el('a', { class: 'apphead__link', href: '#/public', text: 'イベントを探す' }),
+          el('a', { class: 'apphead__link', href: '#/lookup', text: 'マイチケット' })
+        ])
       ]),
-      el('div', { class: 'stack' }, [
-        el('a', { class: 'muted', href: '#/public', text: '公開イベント一覧へ' })
+      el('div', { class: 'login' }, [
+        el('div', { class: 'card' }, [
+          el('h1', { class: 'pagehead__title', text: isFirstRun ? 'パスコードの初期設定' : 'ログイン' }),
+          el('p', { class: 'muted', text: isFirstRun
+            ? '初回起動です。管理画面に入るためのパスコードを設定してください。'
+            : '管理画面に入るにはパスコードを入力してください。' }),
+          input,
+          error,
+          el('button', { class: 'btn btn--primary', text: isFirstRun ? '設定して開始' : 'ログイン', onclick: submit })
+        ])
       ])
     ]);
   });
@@ -1256,6 +1599,21 @@ function renderDashboard() {
       });
       var fillRate = totalCapacity > 0 ? Math.round(liveConfirmed.length / totalCapacity * 100) : 0;
       var checkinRate = confirmed.length > 0 ? Math.round(checkedIn.length / confirmed.length * 100) : 0;
+
+      /* 画像2 の FEATURED EVENT に相当。直近に開催する公開中のイベント */
+      var featured = live.slice().sort(function (a, b) {
+        return new Date(a.startAt) - new Date(b.startAt);
+      })[0] || null;
+
+      /* カテゴリ別の開催件数（円グラフ用）。件数の多い順 */
+      var byCategory = {};
+      events.forEach(function (ev) {
+        var key = ev.category || '未分類';
+        byCategory[key] = (byCategory[key] || 0) + 1;
+      });
+      var categorySlices = Object.keys(byCategory).map(function (k) {
+        return { label: k, value: byCategory[k] };
+      }).sort(function (a, b) { return b.value - a.value; });
 
       /* 開催予定イベントごとの充足率 */
       var upcoming = live.slice().sort(function (a, b) {
@@ -1298,19 +1656,36 @@ function renderDashboard() {
         pageHead('ダッシュボード', [
           el('a', { class: 'btn btn--primary', href: '#/events/new', text: 'イベントを作成' })
         ]),
+        featured ? el('div', { class: 'card hero' }, [
+          el('div', { class: 'hero__body' }, [
+            eyebrow('FEATURED EVENT'),
+            el('h2', { class: 'hero__title', text: featured.title }),
+            el('p', { class: 'muted hero__desc', text: (featured.description || '').slice(0, 90) }),
+            el('a', { class: 'btn btn--primary', href: '#/events/' + featured.id, text: '詳細を見る' })
+          ]),
+          featured.coverImage
+            ? el('img', { class: 'hero__image', src: blobUrl(featured.coverImage), alt: '' })
+            : el('div', { class: 'hero__image hero__image--empty' }, [
+                el('div', { class: 'hero__date' }, [
+                  el('div', { text: formatDateTime(featured.startAt).split(' ')[0] }),
+                  el('div', { class: 'muted', text: formatDateTime(featured.startAt).split(' ')[1] }),
+                  el('div', { class: 'muted', text: featured.format === 'online'
+                    ? 'ONLINE' : (featured.venue || '') })
+                ])
+              ])
+        ]) : null,
+        el('div', { class: 'tiles' }, [
+          tile('公開中のイベント', live.length + ' 件', '下書き ' + drafts.length + ' 件'),
+          tile('申込（参加確定）', confirmed.length + ' 件', 'キャンセルを除く'),
+          tile('定員充足率', fillRate + '%', liveConfirmed.length + ' / ' + totalCapacity + ' 名', fillRate),
+          tile('チェックイン率', checkinRate + '%', checkedIn.length + ' / ' + confirmed.length + ' 名')
+        ]),
         el('div', { class: 'card' }, [
-          el('table', {}, [el('tbody', {}, [
-            statRow('公開中のイベント', live.length + ' 件（下書き ' + drafts.length + ' 件）'),
-            statRow('申込（参加確定）', confirmed.length + ' 件'),
-            el('tr', {}, [
-              el('th', { text: '定員充足率（公開中）' }),
-              el('td', {}, [el('div', { class: 'stack' }, [
-                el('span', { text: liveConfirmed.length + ' / ' + totalCapacity + '　' + fillRate + '%' }),
-                progressBar(fillRate)
-              ])])
-            ]),
-            statRow('チェックイン率', checkedIn.length + ' / ' + confirmed.length + '　' + checkinRate + '%')
-          ])])
+          el('h2', { class: 'section__title', text: 'カテゴリ別の開催状況' }),
+          el('p', { class: 'section__note', text: 'どのカテゴリのイベントをどれだけ開いているかの配分です（終了分を含む全イベント）。' }),
+          categorySlices.length === 0
+            ? el('div', { class: 'empty', text: 'イベントがまだありません。' })
+            : el('div', { class: 'chartrow' }, [pieChart(categorySlices), pieLegend(categorySlices)])
         ]),
         el('div', { class: 'card' }, [
           el('h2', { class: 'section__title', text: '開催予定' }),
@@ -1341,8 +1716,79 @@ function renderDashboard() {
     });
 }
 
+/* カテゴリ配分の円グラフ（F-18）。SVG を自前で描画する（外部ライブラリ不可） */
+var PIE_COLORS = ['#4A7BC8', '#4CAF6D', '#C8944A', '#8A6BC1', '#C05B7A', '#4AA8A8', '#8A8880'];
+
+function pieChart(slices, size) {
+  size = size || 180;
+  var total = slices.reduce(function (n, s) { return n + s.value; }, 0);
+  var svgNs = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(svgNs, 'svg');
+  svg.setAttribute('width', size);
+  svg.setAttribute('height', size);
+  svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size);
+  svg.setAttribute('role', 'img');
+
+  var cx = size / 2, cy = size / 2, r = size / 2 - 2;
+  if (total === 0) {
+    var empty = document.createElementNS(svgNs, 'circle');
+    empty.setAttribute('cx', cx); empty.setAttribute('cy', cy); empty.setAttribute('r', r);
+    empty.setAttribute('fill', 'var(--color-surface-sub)');
+    svg.appendChild(empty);
+    return svg;
+  }
+
+  var angle = -Math.PI / 2;   // 12時方向から時計回り
+  slices.forEach(function (sl, i) {
+    var sweep = (sl.value / total) * Math.PI * 2;
+    var color = PIE_COLORS[i % PIE_COLORS.length];
+    var node;
+    if (slices.length === 1) {
+      node = document.createElementNS(svgNs, 'circle');
+      node.setAttribute('cx', cx); node.setAttribute('cy', cy); node.setAttribute('r', r);
+    } else {
+      var x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+      var x2 = cx + r * Math.cos(angle + sweep), y2 = cy + r * Math.sin(angle + sweep);
+      var large = sweep > Math.PI ? 1 : 0;
+      node = document.createElementNS(svgNs, 'path');
+      node.setAttribute('d', 'M ' + cx + ' ' + cy + ' L ' + x1 + ' ' + y1 +
+        ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2 + ' Z');
+    }
+    node.setAttribute('fill', color);
+    var title = document.createElementNS(svgNs, 'title');
+    title.textContent = sl.label + ' ' + sl.value + '件（' + Math.round(sl.value / total * 100) + '%）';
+    node.appendChild(title);
+    svg.appendChild(node);
+    angle += sweep;
+  });
+  return svg;
+}
+
+function pieLegend(slices) {
+  var total = slices.reduce(function (n, s) { return n + s.value; }, 0);
+  return el('div', { class: 'legend' }, slices.map(function (sl, i) {
+    return el('div', { class: 'legend__item' }, [
+      el('span', { class: 'legend__swatch',
+        style: 'background:' + PIE_COLORS[i % PIE_COLORS.length] }),
+      el('span', { text: sl.label }),
+      el('span', { class: 'muted', text: sl.value + '件・' +
+        (total ? Math.round(sl.value / total * 100) : 0) + '%' })
+    ]);
+  }));
+}
+
+function tile(label, value, note, rate) {
+  return el('div', { class: 'tile' }, [
+    el('div', { class: 'tile__label', text: label }),
+    el('div', { class: 'tile__value', text: value }),
+    rate === undefined ? null : el('div', { style: 'margin-top:var(--space-sm)' }, [progressBar(rate)]),
+    note ? el('div', { class: 'tile__note', text: note }) : null
+  ].filter(Boolean));
+}
+
 function progressBar(rate) {
-  var outer = el('div', { style: 'width:160px;height:8px;background:var(--color-surface-sub);' +
+  // 行ホバー（--color-surface-sub）と同色になると見えないため、トラックは --color-border
+  var outer = el('div', { style: 'width:160px;height:8px;background:var(--color-border);' +
     'border-radius:var(--radius-full);overflow:hidden;display:inline-block;vertical-align:middle' });
   outer.appendChild(el('div', { style: 'width:' + Math.min(100, rate) + '%;height:100%;' +
     'background:var(--color-progress)' }));
@@ -1385,16 +1831,9 @@ function renderEventList() {
 
     function reload() { router(); }
 
-    var qInput = textInput({ placeholder: '例: ハンズオン', value: s.q });
-    qInput.addEventListener('input', function () {
-      s.q = qInput.value; s.page = 1; s.focusSearch = true; reload();
+    var qInput = searchInput({ placeholder: '例: ハンズオン', value: s.q }, s, function (v) {
+      s.q = v; s.page = 1; reload();
     });
-    if (s.focusSearch) {
-      setTimeout(function () {
-        qInput.focus();
-        qInput.setSelectionRange(qInput.value.length, qInput.value.length);
-      }, 0);
-    }
 
     var catSelect = selectInput(
       [{ value: '', label: 'すべてのカテゴリ' }].concat(categories.map(function (c) {
@@ -1413,6 +1852,9 @@ function renderEventList() {
     var body = pageItems.map(function (ev) {
       var st = eventStatusLabel(ev);
       return el('tr', {}, [
+        el('td', {}, [ev.coverImage
+          ? el('img', { class: 'rowthumb', src: blobUrl(ev.coverImage), alt: '' })
+          : el('span', { class: 'rowthumb', text: (ev.category || '—').slice(0, 1) })]),
         el('td', {}, [
           el('a', { href: '#/events/' + ev.id, text: ev.title }),
           ev.seriesId ? el('span', { class: 'badge badge--neutral', text: 'シリーズ' }) : null
@@ -1455,7 +1897,7 @@ function renderEventList() {
           : el('div', {}, [
               el('table', {}, [
                 el('thead', {}, [el('tr', {}, [
-                  el('th', { text: 'イベント名' }), el('th', { text: '状態' }),
+                  el('th', { text: '' }), el('th', { text: 'イベント名' }), el('th', { text: '状態' }),
                   el('th', { text: 'カテゴリ' }), el('th', { text: '開催日時' }),
                   el('th', { text: '申込 / 定員' }), el('th', { text: '' })
                 ])]),
@@ -1556,7 +1998,8 @@ function blankEvent(categories, defaultFormFields) {
       return { id: uid('ff'), label: f.label, type: f.type, options: (f.options || []).slice(),
                required: !!f.required, order: i + 1 };
     }),
-    coverImage: null
+    coverImage: null,
+    staff: { owner: '', members: [] }     // F-35 運営人員（責任者・運営メンバー）
   };
 }
 
@@ -1814,6 +2257,7 @@ function renderEventEdit(id) {
     function collect() {
       readTickets();
       readFormFields();
+      readMembers();
       reorder();
       var format = formatRadio.value();
       return {
@@ -1829,7 +2273,8 @@ function renderEventEdit(id) {
         status: fields.status.__control.value(),
         coverImage: draft.coverImage || null,
         ticketTypes: draft.ticketTypes,
-        formFields: draft.formFields
+        formFields: draft.formFields,
+        staff: draft.staff
       };
     }
 
@@ -1940,6 +2385,12 @@ function renderEventEdit(id) {
         return { id: f.id, label: f.label, type: f.type, options: f.options,
                  required: f.required, order: f.order };
       });
+      record.staff = {                                        // F-35
+        owner: (v.staff && v.staff.owner) || '',
+        members: ((v.staff && v.staff.members) || [])
+          .filter(function (m) { return m.name || m.role; })
+          .map(function (m) { return { id: m.id, name: m.name, role: m.role }; })
+      };
 
       store.put(STORE_EVENTS, record).then(function () {
         toast(isNew ? 'イベントを作成しました。' : 'イベントを保存しました。');
@@ -1947,29 +2398,87 @@ function renderEventEdit(id) {
       });
     }
 
-    /* ---------- 組み立て ---------- */
-    body.appendChild(summaryHost);
-    body.appendChild(el('p', { class: 'muted',
-      text: '「*」の付いた項目は公開時に必須です。下書きのまま保存する場合はイベント名だけで保存できます。' }));
-    body.appendChild(fields.title);
-    body.appendChild(fields.category);
-    body.appendChild(fields.startAt);
-    body.appendChild(fields.endAt);
-    body.appendChild(fields.deadline);
-    body.appendChild(fields.coverImage);
+    /* ---------- F-35 運営人員 ---------- */
+    if (!draft.staff) draft.staff = { owner: '', members: [] };
+    if (!draft.staff.members) draft.staff.members = [];
+    var ownerF = field(
+      { label: '責任者', help: 'このイベント全体の責任を持つ人です。イベント詳細に表示されます。参加者には公開されません。' },
+      textInput({ placeholder: '例: 三原 大和', maxlength: '50', value: draft.staff.owner || '' })
+    );
+    var memberHost = el('div');
+    function paintMembers() {
+      memberHost.textContent = '';
+      if (draft.staff.members.length === 0) {
+        memberHost.appendChild(el('div', { class: 'muted', text: '運営メンバーは登録されていません。' }));
+      }
+      draft.staff.members.forEach(function (m) {
+        var nameI = textInput({ placeholder: '例: 山田 太郎', maxlength: '50', value: m.name });
+        var roleI = textInput({ placeholder: '例: 受付／司会／記録', maxlength: '50', value: m.role });
+        m.__n = nameI; m.__r = roleI;
+        memberHost.appendChild(el('div', { class: 'field__row' }, [
+          nameI, roleI,
+          el('button', { class: 'btn btn--danger', text: '削除', onclick: function () {
+            readMembers();
+            draft.staff.members.splice(draft.staff.members.indexOf(m), 1);
+            paintMembers();
+          } })
+        ]));
+      });
+    }
+    function readMembers() {
+      draft.staff.owner = ownerF.__control.value.trim();
+      draft.staff.members.forEach(function (m) {
+        if (!m.__n) return;
+        m.name = m.__n.value.trim();
+        m.role = m.__r.value.trim();
+      });
+    }
+    paintMembers();
 
-    body.appendChild(el('div', { class: 'section' }, [
-      el('h2', { class: 'section__title', text: '会場・配信' }),
-      fields.format, venueField, onlineField
-    ]));
+    var staffSection = el('div', { class: 'section' }, [
+      el('h2', { class: 'section__title', text: '運営体制' }),
+      el('p', { class: 'section__note', text: '当日だれが何を担当するかの記録です。参加者には公開されません。' }),
+      ownerF,
+      el('div', { class: 'field' }, [
+        el('label', { class: 'field__label', text: '運営メンバー' }),
+        memberHost,
+        el('div', { class: 'field__help', text: '左に氏名、右に担当を入力します。' })
+      ]),
+      el('button', { class: 'btn', text: 'メンバーを追加', onclick: function () {
+        readMembers();
+        draft.staff.members.push({ id: uid('st'), name: '', role: '' });
+        paintMembers();
+      } })
+    ]);
 
-    body.appendChild(el('div', { class: 'section' }, [
-      el('h2', { class: 'section__title', text: '詳細' }),
-      fields.description
-    ]));
+    /* ---------- 組み立て（5ステップのウィザード） ---------- */
+    var STEPS = [
+      { no: 1, label: '基本' },
+      { no: 2, label: '会場・配信' },
+      { no: 3, label: '詳細' },
+      { no: 4, label: 'チケット' },
+      { no: 5, label: 'その他・公開' }
+    ];
+    var step = 1;
 
-    body.appendChild(el('div', { class: 'section' }, [
-      el('h2', { class: 'section__title', text: '券種' }),
+    var panels = {};
+    panels[1] = el('div', {}, [
+      el('h2', { class: 'section__title', text: 'まずはイベント名と開催形式を決めます' }),
+      el('p', { class: 'section__note', text: 'あとから何度でも変更できます。' }),
+      fields.title, fields.format
+    ]);
+    panels[2] = el('div', {}, [
+      el('h2', { class: 'section__title', text: '開催場所または配信先' }),
+      el('p', { class: 'section__note', text: '前のステップで選んだ開催形式に応じた欄が表示されます。' }),
+      venueField, onlineField
+    ]);
+    panels[3] = el('div', {}, [
+      el('h2', { class: 'section__title', text: '日時とイベントの内容' }),
+      fields.startAt, fields.endAt, fields.deadline,
+      fields.category, fields.coverImage, fields.description
+    ]);
+    panels[4] = el('div', {}, [
+      el('h2', { class: 'section__title', text: '券種と定員' }),
       el('p', { class: 'section__note', text: '公開するには券種が1件以上必要です。定員は券種ごとに判定されます。' }),
       ticketHost,
       el('button', {
@@ -1980,45 +2489,94 @@ function renderEventEdit(id) {
           paintTickets();
         }
       })
-    ]));
-
-    body.appendChild(el('div', { class: 'section' }, [
-      el('h2', { class: 'section__title', text: '申込フォームのカスタム項目' }),
-      el('p', { class: 'section__note',
-        text: '氏名とメールアドレスは常に必須項目として取得します。ここでは追加で聞きたいことだけを設定してください（最大' + MAX_FORM_FIELDS + '件）。' }),
-      fieldHost,
-      el('button', {
-        class: 'btn', text: '項目を追加',
-        onclick: function () {
-          readFormFields();
-          if (draft.formFields.length >= MAX_FORM_FIELDS) {
-            alert('カスタム項目は' + MAX_FORM_FIELDS + '件以内で設定してください');
-            return;
+    ]);
+    panels[5] = el('div', {}, [
+      el('h2', { class: 'section__title', text: 'その他の設定' }),
+      el('div', { class: 'section' }, [
+        el('h2', { class: 'section__title', text: '申込フォームのカスタム項目' }),
+        el('p', { class: 'section__note',
+          text: '氏名とメールアドレスは常に必須項目として取得します。ここでは追加で聞きたいことだけを設定してください（最大' + MAX_FORM_FIELDS + '件）。' }),
+        fieldHost,
+        el('button', {
+          class: 'btn', text: '項目を追加',
+          onclick: function () {
+            readFormFields();
+            if (draft.formFields.length >= MAX_FORM_FIELDS) {
+              alert('カスタム項目は' + MAX_FORM_FIELDS + '件以内で設定してください');
+              return;
+            }
+            draft.formFields.push({ id: uid('ff'), label: '', type: 'text', options: [],
+                                    required: false, order: draft.formFields.length + 1 });
+            paintFormFields();
           }
-          draft.formFields.push({ id: uid('ff'), label: '', type: 'text', options: [],
-                                  required: false, order: draft.formFields.length + 1 });
-          paintFormFields();
-        }
-      })
-    ]));
+        })
+      ]),
+      staffSection,
+      el('div', { class: 'section' }, [
+        el('h2', { class: 'section__title', text: '公開状態' }),
+        fields.status
+      ])
+    ]);
 
-    body.appendChild(el('div', { class: 'section' }, [
-      el('h2', { class: 'section__title', text: '公開状態' }),
-      fields.status
-    ]));
+    var stepNav = el('ol', { class: 'steps' });
+    var panelHost = el('div');
+    var barHost = el('div', { class: 'formbar' });
 
-    syncFormat();
+    function paintStep() {
+      stepNav.textContent = '';
+      STEPS.forEach(function (st) {
+        stepNav.appendChild(el('li', {
+          class: 'steps__item' + (st.no === step ? ' is-current' : (st.no < step ? ' is-done' : '')),
+          text: st.no + '. ' + st.label,
+          onclick: function () { goTo(st.no); }
+        }));
+      });
+      panelHost.textContent = '';
+      panelHost.appendChild(panels[step]);
+      syncFormat();
+
+      barHost.textContent = '';
+      if (step > 1) {
+        barHost.appendChild(el('button', { class: 'btn', text: '戻る',
+          onclick: function () { goTo(step - 1); } }));
+      }
+      if (step < STEPS.length) {
+        barHost.appendChild(el('button', { class: 'btn btn--primary', text: '次へ',
+          onclick: function () { goTo(step + 1); } }));
+      } else {
+        barHost.appendChild(el('button', { class: 'btn btn--primary', text: '公開する',
+          onclick: function () { save('published'); } }));
+      }
+      barHost.appendChild(el('button', { class: 'btn', text: '下書きとして保存',
+        onclick: function () { save('draft'); } }));
+      barHost.appendChild(el('span', { class: 'muted',
+        text: step < STEPS.length
+          ? '入力内容は保存するまでこの画面に保持されます。'
+          : '公開すると公開イベント一覧に載り、申込を受け付けます。' }));
+    }
+
+    function goTo(n) {
+      // 途中のステップ移動では止めない。公開時にまとめて検証する（D-01）
+      readTickets(); readFormFields(); readMembers();
+      step = Math.min(STEPS.length, Math.max(1, n));
+      summaryHost.textContent = '';
+      paintStep();
+    }
+
+    body.appendChild(summaryHost);
+    body.appendChild(el('p', { class: 'muted',
+      text: '「*」の付いた項目は公開時に必須です。下書きのまま保存する場合はイベント名だけで保存できます。' }));
+    body.appendChild(stepNav);
+    body.appendChild(panelHost);
+
+    paintStep();
 
     return el('div', {}, [
       pageHead(isNew ? 'イベントを作成' : 'イベントを編集', [
         el('a', { class: 'btn', href: id ? '#/events/' + id : '#/events', text: 'やめる' })
       ]),
       body,
-      el('div', { class: 'formbar' }, [
-        el('button', { class: 'btn', text: '下書きとして保存', onclick: function () { save('draft'); } }),
-        el('button', { class: 'btn btn--primary', text: '公開する', onclick: function () { save('published'); } }),
-        el('span', { class: 'muted', text: '公開すると公開イベント一覧に載り、申込を受け付けます。' })
-      ])
+      barHost
     ]);
   });
 }
@@ -2115,6 +2673,20 @@ function renderEventDetail(id) {
           statRow('申込締切', formatDateTime(ev.deadline)),
           statRow('カスタム項目', (ev.formFields || []).length + ' 件')
         ])])
+      ]),
+      el('div', { class: 'card' }, [
+        el('h2', { class: 'section__title', text: '運営体制' }),
+        el('p', { class: 'section__note', text: '参加者には公開されません。' }),
+        (!ev.staff || (!ev.staff.owner && (!ev.staff.members || ev.staff.members.length === 0)))
+          ? el('div', { class: 'empty', text: '運営体制は登録されていません。イベントを編集して設定できます。' })
+          : el('table', {}, [el('tbody', {}, [
+              el('tr', {}, [el('th', { text: '責任者' }), el('td', { text: ev.staff.owner || '—' })])
+            ].concat((ev.staff.members || []).map(function (m) {
+              return el('tr', {}, [
+                el('th', { text: m.role || '運営メンバー' }),
+                el('td', { text: m.name || '—' })
+              ]);
+            })))])
       ]),
       el('div', { class: 'card' }, [
         el('h2', { class: 'section__title', text: '券種' }),
@@ -2215,15 +2787,8 @@ function renderEntryList(eventId) {
     if (s.page > totalPages) s.page = totalPages;
     var pageItems = filtered.slice((s.page - 1) * ENTRIES_PER_PAGE, s.page * ENTRIES_PER_PAGE);
 
-    var qInput = textInput({ placeholder: '例: 山田 / example.com / H7K2M9XQ', value: s.q });
-    qInput.addEventListener('input', function () {
-      s.q = qInput.value; s.page = 1; s.focus = true; router();
-    });
-    if (s.focus) {
-      setTimeout(function () {
-        qInput.focus(); qInput.setSelectionRange(qInput.value.length, qInput.value.length);
-      }, 0);
-    }
+    var qInput = searchInput({ placeholder: '例: 山田 / example.com / H7K2M9XQ', value: s.q }, s,
+      function (v) { s.q = v; s.page = 1; router(); });
     var stateSel = selectInput([
       { value: '', label: 'すべての状態' },
       { value: 'confirmed', label: '参加確定' },
@@ -2878,23 +3443,44 @@ function settingsFormFields(defaults) {
 }
 
 /* メールテンプレート（F-19）*/
-var MAIL_PLACEHOLDERS = '{イベント名} {開催日時} {場所} {受付コード} {氏名}';
+var MAIL_PLACEHOLDERS = ['{イベント名}', '{開催日時}', '{場所}', '{受付コード}', '{氏名}'];
+
+/* カーソル位置に差し込み文字列を挿入する */
+function insertAtCursor(textarea, text) {
+  var start = textarea.selectionStart, end = textarea.selectionEnd;
+  var v = textarea.value;
+  textarea.value = v.slice(0, start) + text + v.slice(end);
+  var pos = start + text.length;
+  textarea.focus();
+  textarea.setSelectionRange(pos, pos);
+}
 
 function settingsMail(templates) {
-  function tpl(key, label, help, sample) {
-    var f = field({ label: label, help: help }, el('textarea', { placeholder: sample }));
-    f.__control.value = templates[key] || '';
+  function tpl(key, label, help, sample, keys) {
+    var area = el('textarea', { placeholder: sample });
+    area.value = templates[key] || '';
+    var chips = el('div', { class: 'chips' }, [
+      el('span', { class: 'chips__label', text: 'クリックで挿入:' })
+    ].concat(keys.map(function (ph) {
+      return el('button', { class: 'chip', text: ph,
+        onclick: function () { insertAtCursor(area, ph); } });
+    })));
+    var f = field({ label: label, help: help }, el('div', {}, [area, chips]));
+    f.__control = area;
     return f;
   }
   var invite = tpl('invite', '申込者への案内',
-    '参加者一覧からメッセージを送るとき、本文の初期値として差し込まれます。使える差し込み: ' + MAIL_PLACEHOLDERS,
-    '例: {氏名} 様\n\n{イベント名} へのお申込みありがとうございます。\n開催日時: {開催日時}\n場所: {場所}\n受付コード: {受付コード}');
+    '参加者一覧からメッセージを送るとき、本文の初期値として差し込まれます。',
+    '例: {氏名} 様\n\n{イベント名} へのお申込みありがとうございます。\n開催日時: {開催日時}\n場所: {場所}\n受付コード: {受付コード}',
+    MAIL_PLACEHOLDERS);
   var reminder = tpl('reminder', 'リマインド',
-    '開催前の連絡に使う文面です。使える差し込み: ' + MAIL_PLACEHOLDERS,
-    '例: {氏名} 様\n\n明日 {開催日時} より {イベント名} を開催します。\n受付コード: {受付コード}');
+    '開催前の連絡に使う文面です。',
+    '例: {氏名} 様\n\n明日 {開催日時} より {イベント名} を開催します。\n受付コード: {受付コード}',
+    MAIL_PLACEHOLDERS);
   var announce = tpl('announce', '告知文',
-    'イベント詳細の「告知文を生成」で使う文面です。まだ申込者がいない段階の告知に使います。使える差し込み: {イベント名} {開催日時} {場所}',
-    '例: 【{イベント名}】{開催日時} 開催\n場所: {場所}\n参加は下記からお申し込みください。');
+    'イベント詳細の「告知文を生成」で使う文面です。まだ申込者がいない段階の告知に使います。',
+    '例: 【{イベント名}】{開催日時} 開催\n場所: {場所}\n参加は下記からお申し込みください。',
+    ['{イベント名}', '{開催日時}', '{場所}']);
 
   return el('div', {}, [
     el('p', { class: 'muted', text: '実際の送信は既定のメールソフトが行います。本システムから直接送信することはできません。' }),
@@ -3081,36 +3667,42 @@ function settingsData() {
 function publicShell(title, children, org, showBanner) {
   org = org || {};
   var name = org.name || 'イベント';
-  // F-09 未実装／未設定時の既定挙動（仕様書 5.5）
+  // F-09 未実装／未設定時の既定挙動（仕様書 5.6）
   //   ロゴなし → 組織名のテキストのみ ／ ヘッダー画像なし → 単色 ／ 紹介文なし → 表示しない
-  var brand = el('div', { class: 'stack' }, [
-    org.logo ? el('img', { src: blobUrl(org.logo), alt: name,
-      style: 'height:28px;width:auto;border-radius:var(--radius-sm)' }) : null,
-    el('a', { class: 'public__brand', href: '#/public', text: name })
+  // ヘッダーは管理側（.apphead）と同じクラスを使い、高さ・ロゴ位置・字送りを揃える
+  var brand = el('a', { class: 'apphead__brand apphead__brand--link', href: '#/public' }, [
+    actioLogo({ size: 22 }),
+    el('span', { class: 'apphead__sep' }),
+    org.logo ? el('img', { class: 'apphead__logo', src: blobUrl(org.logo), alt: '' }) : null,
+    el('span', { class: 'muted', text: name })
+  ].filter(Boolean));
+
+  var path = currentPath();
+  function navLink(href, label, match) {
+    return el('a', { href: '#' + href, text: label,
+      class: 'apphead__link' + (match(path) ? ' is-active' : '') });
+  }
+  var nav = el('nav', { class: 'apphead__actions' }, [
+    navLink('/public', 'イベントを探す', function (p) { return p.indexOf('/public') === 0; }),
+    navLink('/lookup', 'マイチケット', function (p) { return p === '/lookup'; }),
+    navLink('/login', '主催者ログイン', function (p) { return p === '/login'; })
   ]);
+
   var banner = showBanner ? el('div', {
     class: 'public__banner',
     style: org.headerImage
       ? 'background-image:url(' + blobUrl(org.headerImage) + ');background-size:cover;background-position:center'
       : 'background:var(--color-surface-sub)'
   }) : null;
-  var path = currentPath();
-  function navLink(href, label, match) {
-    return el('a', { href: '#' + href, text: label,
-      class: match(path) ? 'is-active' : '' });
-  }
-  var nav = el('nav', { class: 'public__nav' }, [
-    navLink('/public', 'イベントを探す', function (p) { return p.indexOf('/public') === 0; }),
-    navLink('/lookup', 'マイチケット', function (p) { return p === '/lookup'; }),
-    navLink('/login', '主催者ログイン', function (p) { return p === '/login'; })
-  ]);
 
-  return el('div', { class: 'public' }, [
-    banner,
-    el('div', { class: 'public__head' }, [brand, nav]),
-    org.intro ? el('p', { class: 'muted', style: 'white-space:pre-wrap', text: org.intro }) : null,
-    el('h1', { class: 'pagehead__title', text: title })
-  ].filter(Boolean).concat(children || []));
+  return el('div', { class: 'publicwrap' }, [
+    el('header', { class: 'apphead' }, [brand, nav]),
+    el('div', { class: 'public' }, [
+      banner,
+      org.intro ? el('p', { class: 'muted', style: 'white-space:pre-wrap', text: org.intro }) : null,
+      el('div', { class: 'pagehead' }, [el('h1', { class: 'pagehead__title', text: title })])
+    ].filter(Boolean).concat(children || []))
+  ]);
 }
 
 /* ------------------------------------------------------------
@@ -3155,15 +3747,9 @@ function renderPublicList() {
       });
       open.sort(function (a, b) { return new Date(a.startAt) - new Date(b.startAt); });
 
-      var qInput = textInput({ placeholder: '例: ハンズオン', value: s.q });
-      qInput.addEventListener('input', function () {
-        s.q = qInput.value; s.focus = true; router();
+      var qInput = searchInput({ placeholder: '例: ハンズオン', value: s.q }, s, function (v) {
+        s.q = v; router();
       });
-      if (s.focus) {
-        setTimeout(function () {
-          qInput.focus(); qInput.setSelectionRange(qInput.value.length, qInput.value.length);
-        }, 0);
-      }
       var catSelect = selectInput(
         [{ value: '', label: 'すべてのカテゴリ' }].concat(categories.map(function (c) {
           return { value: c, label: c };
@@ -3171,10 +3757,24 @@ function renderPublicList() {
       catSelect.addEventListener('change', function () { s.category = catSelect.value; router(); });
 
       var cards = open.map(function (ev) {
-        return el('div', { class: 'card' }, [
-          el('div', {}, [el('a', { href: '#/public/' + ev.id, text: ev.title })]),
-          el('div', { class: 'muted', text: formatDateTime(ev.startAt) + '　' +
-            (ev.format === 'online' ? 'オンライン' : ev.venue || '会場未定') + '　' + ev.category })
+        var sold = 0, cap = eventCapacity(ev);
+        var thumb = ev.coverImage
+          ? el('img', { class: 'eventcard__thumb', src: blobUrl(ev.coverImage), alt: '' })
+          // 画像未設定でも枠が崩れないよう、カテゴリ頭文字のプレースホルダを置く
+          : el('div', { class: 'eventcard__thumb eventcard__thumb--empty' },
+              [el('span', { text: (ev.category || 'EVENT').slice(0, 1) })]);
+        return el('a', { class: 'eventcard', href: '#/public/' + ev.id }, [
+          thumb,
+          el('div', { class: 'eventcard__body' }, [
+            el('div', { class: 'eventcard__meta', text: formatDateTime(ev.startAt) }),
+            el('div', { class: 'eventcard__title', text: ev.title }),
+            el('div', { class: 'eventcard__meta', text:
+              (ev.format === 'online' ? 'オンライン' : ev.venue || '会場未定') }),
+            el('div', { class: 'stack' }, [
+              el('span', { class: 'badge badge--neutral', text: ev.category }),
+              cap > 0 ? el('span', { class: 'muted', text: '定員 ' + cap + ' 名' }) : null
+            ])
+          ])
         ]);
       });
 
@@ -3283,9 +3883,10 @@ function renderApplyForm(eventId) {
   return Promise.all([
     store.get(STORE_EVENTS, eventId),
     store.byIndex(STORE_ENTRIES, 'eventId', eventId),
-    getSetting('org')
+    getSetting('org'),
+    getParticipants()
   ]).then(function (res) {
-    var ev = res[0], entries = res[1], org = res[2] || {};
+    var ev = res[0], entries = res[1], org = res[2] || {}, knownPasswords = res[3];
     if (!ev) return renderError('指定されたイベントが見つかりません');
     if (ev.status === 'draft' && !session.authenticated) {
       return renderError('このイベントは公開されていません');
@@ -3327,9 +3928,17 @@ function renderApplyForm(eventId) {
       textInput({ placeholder: '例: 山田 太郎', maxlength: '50', value: d.name })
     );
     fields.email = field(
-      { label: 'メールアドレス', required: true, help: '受付コードのご連絡先です。お間違えのないようご入力ください。' },
+      { label: 'メールアドレス', required: true, help: 'マイチケットへのログインに使います。お間違えのないようご入力ください。' },
       el('input', { type: 'email', placeholder: '例: taro.yamada@example.com', maxlength: '254', value: d.email })
     );
+    // D-43 マイチケット用パスワード。同じメールで2回目以降は既存のものを照合する
+    fields.password = field(
+      { label: 'マイチケット用パスワード', required: true,
+        help: 'マイチケットでお申込みを確認・キャンセルするときに使います。4〜16文字の英数字。' },
+      el('input', { type: 'password', maxlength: '16', value: d.password || '' })
+    );
+    var passwordHint = el('div', { class: 'field__help' });
+    fields.password.appendChild(passwordHint);
 
     // カスタム項目（F-07）
     var customHost = el('div');
@@ -3373,6 +3982,7 @@ function renderApplyForm(eventId) {
         ticketTypeId: fields.ticketTypeId.__control.value,
         name: fields.name.__control.value.trim(),
         email: fields.email.__control.value.trim(),
+        password: fields.password.__control.value,
         answers: answers
       };
     }
@@ -3383,6 +3993,7 @@ function renderApplyForm(eventId) {
       Object.keys(customControls).forEach(function (id) { setFieldError(customControls[id].node, ''); });
       function fail(f, m) { setFieldError(f, m); errors.push(m); }
 
+      setFieldError(fields.password, '');
       if (!v.name) fail(fields.name, MSG.required('氏名'));                          // D-30
       else if (v.name.length > 50) fail(fields.name, MSG.maxLength('氏名', 50));
       if (!v.email) fail(fields.email, MSG.required('メールアドレス'));               // D-31
@@ -3400,6 +4011,17 @@ function renderApplyForm(eventId) {
           fail(c.node, msg);
         }
       });
+
+      // D-43 パスワード。既存のメールアドレスなら登録済みのものと一致すること
+      if (!v.password) fail(fields.password, MSG.required('マイチケット用パスワード'));
+      else if (!/^[A-Za-z0-9]{4,16}$/.test(v.password)) {
+        fail(fields.password, 'マイチケット用パスワードは4〜16文字の英数字で入力してください');
+      } else {
+        var known = knownPasswords[v.email.toLowerCase()];
+        if (known && known !== v.password) {
+          fail(fields.password, 'このメールアドレスには別のパスワードが登録されています。前回設定したものを入力してください');
+        }
+      }
 
       // F-12 重複申込（eventId + email、cancelled は対象外）D-09
       if (v.email && entries.some(function (e) {
@@ -3422,7 +4044,7 @@ function renderApplyForm(eventId) {
       summaryHost,
       el('div', { class: 'card' }, [
         el('p', { class: 'muted', text: '「*」の付いた項目は必須です。' }),
-        fields.ticketTypeId, fields.name, fields.email,
+        fields.ticketTypeId, fields.name, fields.email, fields.password,
         customHost,
         el('div', { class: 'formbar' }, [
           el('button', {
@@ -3468,7 +4090,8 @@ function renderApplyConfirm(eventId) {
       statRow('開催日時', formatDateTime(ev.startAt)),
       statRow('券種', ticket ? ticket.name : '—'),
       statRow('氏名', d.name),
-      statRow('メールアドレス', d.email)
+      statRow('メールアドレス', d.email),
+      statRow('マイチケット用パスワード', '••••••（入力済み）')
     ];
     (ev.formFields || []).slice().sort(function (a, b) { return a.order - b.order; }).forEach(function (f) {
       var v = d.answers[f.id];
@@ -3508,11 +4131,13 @@ function renderApplyConfirm(eventId) {
           state: 'confirmed', checkedInAt: null, cancelledAt: null,
           createdAt: now, updatedAt: now
         };
-        return store.put(STORE_ENTRIES, entry).then(function () {
-          applyDraft = null;
-          lastApplied = { eventId: eventId, code: code };
-          navigate('/public/' + eventId + '/done');
-        });
+        return store.put(STORE_ENTRIES, entry)
+          .then(function () { return setParticipantPassword(d.email, d.password); })  // D-43
+          .then(function () {
+            applyDraft = null;
+            lastApplied = { eventId: eventId, code: code };
+            navigate('/public/' + eventId + '/done');
+          });
       });
     }
 
@@ -3588,44 +4213,44 @@ function renderLookup() {
 
     function showForm(message) {
       host.textContent = '';
-      var codeF = field({ label: '受付コード', required: true, help: '申込完了画面に表示された8桁の英数字です。' },
-        textInput({ placeholder: '例: H7K2M9XQ', maxlength: '8' }));
       var mailF = field({ label: 'メールアドレス', required: true, help: 'お申込み時に入力したメールアドレスです。' },
         el('input', { type: 'email', placeholder: '例: taro.yamada@example.com' }));
+      var passF = field({ label: 'パスワード', required: true, help: 'お申込み時に設定したマイチケット用パスワードです。' },
+        el('input', { type: 'password', maxlength: '16' }));
       var errorHost = el('div');
       if (message) errorHost.appendChild(el('div', { class: 'alert alert--danger', text: message }));
 
-      function search() {
+      function login() {
         errorHost.textContent = '';
-        setFieldError(codeF, ''); setFieldError(mailF, '');
-        var code = codeF.__control.value.trim().toUpperCase();
+        setFieldError(mailF, ''); setFieldError(passF, '');
         var email = mailF.__control.value.trim();
-        if (!code) { setFieldError(codeF, MSG.required('受付コード')); return; }
+        var pass = passF.__control.value;
         if (!email) { setFieldError(mailF, MSG.required('メールアドレス')); return; }
+        if (!pass) { setFieldError(passF, MSG.required('パスワード')); return; }
 
-        store.byIndex(STORE_ENTRIES, 'code', code).then(function (hits) {
-          var match = hits.filter(function (e) {
-            return e.email.toLowerCase() === email.toLowerCase();
-          })[0];
-          if (!match) {
+        getParticipants().then(function (map) {
+          var known = map[email.toLowerCase()];
+          // 登録の有無を区別しない。存在しないメールアドレスを判別されないようにする
+          if (!known || known !== pass) {
             errorHost.appendChild(el('div', { class: 'alert alert--danger',
-              text: '受付コードとメールアドレスの組み合わせが見つかりません。入力内容をご確認ください。' }));
+              text: 'メールアドレスまたはパスワードが正しくありません。' }));
             return;
           }
-          lookupSession = { email: match.email };
+          lookupSession = { email: email };
           showList();
         });
       }
 
-      codeF.__control.addEventListener('keydown', function (e) { if (e.key === 'Enter') search(); });
-      mailF.__control.addEventListener('keydown', function (e) { if (e.key === 'Enter') search(); });
+      mailF.__control.addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
+      passF.__control.addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
 
       host.appendChild(el('div', { class: 'card' }, [
-        el('p', { class: 'muted', text: '受付コードとメールアドレスで照合すると、そのメールアドレスの申込をまとめて確認できます。' }),
-        codeF, mailF, errorHost,
+        el('p', { class: 'muted', text: 'お申込み時に設定したメールアドレスとパスワードで、申込内容の確認とキャンセルができます。' }),
+        mailF, passF, errorHost,
         el('div', { class: 'formbar' }, [
-          el('button', { class: 'btn btn--primary', text: '照会する', onclick: search })
-        ])
+          el('button', { class: 'btn btn--primary', text: 'ログイン', onclick: login })
+        ]),
+        el('p', { class: 'field__help', text: 'パスワードはイベントに申し込むときに設定します。お忘れの場合は主催者へご連絡ください。' })
       ]));
     }
 
@@ -3653,7 +4278,7 @@ function renderLookup() {
           el('div', { class: 'stack' }, [
             el('span', { text: email + ' の申込 ' + rows.length + ' 件' }),
             el('button', {
-              class: 'btn', text: '別のコードで照会',
+              class: 'btn', text: 'ログアウト',
               onclick: function () { lookupSession = null; showForm(); }
             })
           ])
