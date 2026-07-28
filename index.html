@@ -7,16 +7,17 @@
    値をここで独自に変えないこと
    ============================================================ */
 :root {
-  /* 基本 */
-  --color-bg:            #F7F6F3;
+  /* 基本 — 白基調（Issue #3）。面は白で統一し、境界は罫線で切る */
+  --color-bg:            #FFFFFF;
   --color-surface:       #FFFFFF;
-  --color-surface-sub:   #F0EFEB;
-  --color-border:        #E4E2DC;
-  --color-text:          #1A1A18;
-  --color-text-muted:    #8A8880;
+  --color-surface-sub:   #F4F5F7;   /* ホバー・アクティブ・プレースホルダ面 */
+  --color-canvas:        #FAFAFB;   /* 管理画面のコンテンツ地。白との差はごく薄く */
+  --color-border:        #E5E7EB;
+  --color-text:          #16181D;
+  --color-text-muted:    #6B7280;
 
   /* アクセント */
-  --color-accent:        #1A1A18;
+  --color-accent:        #16181D;
   --color-accent-text:   #FFFFFF;
 
   /* ロゴマーク（Issue #2 画像1） */
@@ -26,13 +27,13 @@
   /* セマンティック */
   --color-success-bg:    #E4F1E5;  --color-success-text: #2E7D40;
   --color-warning-bg:    #FBF1DA;  --color-warning-text: #96792A;
-  --color-neutral-bg:    #ECEAE6;  --color-neutral-text: #6B6963;
+  --color-neutral-bg:    #F1F2F4;  --color-neutral-text: #5B616E;
   --color-danger-bg:     #FBE6E3;  --color-danger-text:  #B23B2C;
 
   /* 可視化 */
   --color-progress:      #4CAF6D;
   --color-chart-line:    #4A7BC8;
-  --color-chart-grid:    #EDEBE7;
+  --color-chart-grid:    #EDEEF1;
 
   /* 余白 */
   --space-xs: 4px;   --space-sm: 8px;   --space-md: 12px;
@@ -51,8 +52,8 @@
 
   /* 境界・影 */
   --border:    1px solid var(--color-border);
-  --shadow-sm: 0 1px 2px rgba(26,26,24,.06);
-  --shadow-md: 0 4px 12px rgba(26,26,24,.10);
+  --shadow-sm: 0 1px 2px rgba(22,24,29,.05);
+  --shadow-md: 0 6px 20px rgba(22,24,29,.08);
 
   /* レイアウト */
   --sidebar-width: 200px;
@@ -122,6 +123,25 @@ a { color: inherit; }
   color: var(--color-text);
   font-weight: var(--font-weight-medium);
 }
+
+.sidebar__sub {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 var(--space-sm);
+  padding-left: var(--space-2xl);
+  border-left: var(--border);
+  margin-left: var(--space-lg);
+}
+.sidebar__sublink {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+.sidebar__sublink:hover { background: var(--color-surface-sub); color: var(--color-text); }
+.sidebar__sublink.is-active { color: var(--color-text); font-weight: var(--font-weight-medium); }
 
 .sidebar__foot {
   display: flex;
@@ -214,6 +234,19 @@ a { color: inherit; }
   flex: 1 1 auto;
   min-width: 0;
   padding: var(--space-xl) var(--space-2xl);
+  background: var(--color-canvas);
+}
+
+/* i3b に倣った管理画面のフッター */
+.appfoot {
+  border-top: var(--border);
+  background: var(--color-surface);
+  padding: var(--space-lg) var(--space-2xl);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-lg);
 }
 .main__inner { max-width: var(--content-max-width); }
 
@@ -242,28 +275,47 @@ a { color: inherit; }
 }
 
 /* 画像2 の数値タイル */
-.hero { display: flex; gap: var(--space-2xl); align-items: stretch; padding: 0; overflow: hidden; }
+/* グリッドで列幅を決める。img はフレックス項目だと intrinsic size を下限に持ち
+   縮まないため、本文カラムが潰れて1文字ずつ折り返していた（Issue #3） */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 42%);
+  padding: 0;
+  overflow: hidden;
+  height: 260px;
+}
 .hero__body {
-  flex: 1 1 auto;
-  padding: var(--space-3xl) var(--space-2xl);
+  padding: var(--space-2xl);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   min-width: 0;
+  overflow: hidden;
 }
 .hero__title {
-  font-size: var(--font-size-display);
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
-  line-height: 1.3;
+  line-height: 1.4;
   margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-.hero__desc { margin: 0; }
+.hero__desc {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .hero__image {
-  flex: 0 0 42%;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
   object-fit: cover;
-  min-height: 240px;
   background: var(--color-surface-sub);
 }
 .hero__image--empty { display: flex; align-items: flex-end; justify-content: flex-end; }
@@ -598,28 +650,90 @@ input[type=datetime-local] { max-width: 260px; }
   margin: 0 auto;
   padding: var(--space-xl) var(--space-2xl);
 }
-.eventcard {
-  display: flex;
-  gap: var(--space-lg);
-  background: var(--color-surface);
-  border: var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-md);
-  text-decoration: none;
-  color: inherit;
+
+/* ---------- 参加者トップ（Issue #3 / i3c） ---------- */
+.phero {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: var(--space-2xl);
+  background-color: #1D222B;
+  color: #FFFFFF;
 }
-.eventcard:hover { box-shadow: var(--shadow-md); }
-.eventcard__thumb {
-  width: 200px;
-  height: 112px;               /* 16:9 */
-  flex: 0 0 200px;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
+.phero--plain {
+  background-image: linear-gradient(135deg, #232936 0%, #454F63 100%);
+}
+.phero__inner {
+  padding: var(--space-3xl) var(--space-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-height: 260px;
+  justify-content: center;
+}
+.phero__title {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.35;
+  margin: 0;
+  letter-spacing: .01em;
+}
+.phero__lead { margin: 0 0 var(--space-lg); font-size: var(--font-size-md); opacity: .85; }
+
+.searchbar {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-sm);
+  flex-wrap: wrap;
+}
+.searchbar__field { flex: 1 1 180px; min-width: 0; }
+.searchbar__field input,
+.searchbar__field select {
+  width: 100%;
+  max-width: none;
+  border-color: transparent;
   background: var(--color-surface-sub);
 }
-.eventcard__thumb--empty {
+.searchbar__btn { flex: 0 0 auto; padding: var(--space-sm) var(--space-xl); }
+
+.psection { margin-bottom: var(--space-3xl); }
+.psection__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+.psection__title { font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); margin: 0; }
+
+.ecards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-lg);
+}
+.ecard {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+.ecard:hover { box-shadow: var(--shadow-md); }
+.ecard__media { position: relative; }
+.ecard__img {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+  display: block;
+  background: var(--color-surface-sub);
+}
+.ecard__img--empty {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -627,10 +741,64 @@ input[type=datetime-local] { max-width: 260px; }
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
 }
-.eventcard__body { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; }
-.eventcard__title { font-size: var(--font-size-lg); font-weight: var(--font-weight-medium); }
-.eventcard__meta { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+/* 画像の左上にカテゴリを重ねる */
+.ecard__cat {
+  position: absolute;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  background: rgba(22,24,29,.82);
+  color: #FFFFFF;
+  font-size: var(--font-size-xs);
+  letter-spacing: .08em;
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+.ecard__body {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+.ecard__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ecard__meta { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.ecard__tags {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: var(--space-xs);
+}
 
+.catchips { display: flex; gap: var(--space-sm); flex-wrap: wrap; }
+.catchip {
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+.catchip:hover { background: var(--color-surface-sub); }
+.catchip.is-active {
+  border-color: var(--color-accent);
+  background: var(--color-surface-sub);
+  font-weight: var(--font-weight-medium);
+}
+.catchip__count { font-size: var(--font-size-xs); color: var(--color-text-muted); }
 .public__lead {
   background: var(--color-surface);
   border: var(--border);
@@ -1357,9 +1525,15 @@ function seedDemoData() {
    セッション（F-27）
    ログイン状態はメモリ上のみ。ページ再読込で解除される
    ------------------------------------------------------------ */
-var session = { authenticated: false, orgName: '', orgLogoUrl: null };
+var session = { authenticated: false, orgName: '', orgLogoUrl: null, settingsTab: 'general' };
 
 /* ヘッダー表示用に組織情報をメモリへ載せる。ロゴの Blob URL は差し替え時に解放する */
+function refreshUiCache() {
+  return getSetting('uiState').then(function (ui) {
+    if (ui && ui.lastTab) session.settingsTab = ui.lastTab;
+  });
+}
+
 function refreshOrgCache() {
   return getSetting('org').then(function (org) {
     org = org || {};
@@ -1456,13 +1630,26 @@ function renderShell(screenId, contentNode) {
   }
 
   var path = currentPath();
-  var nav = el('nav', { class: 'sidebar__nav' }, ADMIN_NAV.map(function (item) {
+  var nav = el('nav', { class: 'sidebar__nav' });
+  ADMIN_NAV.forEach(function (item) {
     var active = item.path === '/' ? path === '/' : path.indexOf(item.path) === 0;
-    return el('a', {
+    nav.appendChild(el('a', {
       class: 'sidebar__link' + (active ? ' sidebar__link--active' : ''),
       href: '#' + item.path
-    }, [navIcon(item.icon), el('span', { text: item.label })]);
-  }));
+    }, [navIcon(item.icon), el('span', { text: item.label })]));
+
+    // 設定・データ管理は子項目（タブ）まで開いて見せる（Issue #3）
+    if (item.path === '/settings' && active) {
+      nav.appendChild(el('div', { class: 'sidebar__sub' }, SETTINGS_TABS.map(function (t) {
+        return el('a', {
+          class: 'sidebar__sublink' + (session.settingsTab === t.key ? ' is-active' : ''),
+          href: '#/settings',
+          text: t.label,
+          onclick: function () { selectSettingsTab(t.key); }
+        });
+      })));
+    }
+  });
 
   // 画像2 に倣い、サイドバー下部で運用中の組織を示す
   var orgInitial = (session.orgName || '?').slice(0, 1);
@@ -1499,7 +1686,11 @@ function renderShell(screenId, contentNode) {
     sidebar,
     el('div', { class: 'mainwrap' }, [
       header,
-      el('main', { class: 'main' }, [el('div', { class: 'main__inner' }, [contentNode])])
+      el('main', { class: 'main' }, [el('div', { class: 'main__inner' }, [contentNode])]),
+      el('footer', { class: 'appfoot' }, [
+        el('span', { text: '© ' + (session.orgName || '組織名未設定') + '　' + SERVICE_NAME }),
+        el('span', { text: 'この端末のブラウザ内にデータを保持しています' })
+      ])
     ])
   ]));
 }
@@ -3162,6 +3353,16 @@ var SETTINGS_TABS = [
   { key: 'data',      label: 'データ管理' }
 ];
 
+/* 設定タブの選択。UI状態は localStorage ではなく settings.uiState に保持する */
+function selectSettingsTab(key) {
+  session.settingsTab = key;
+  getSetting('uiState').then(function (ui) {
+    return setSetting('uiState', Object.assign({}, ui || {}, { lastTab: key }));
+  }).then(function () {
+    if (currentPath() === '/settings') router();
+  });
+}
+
 function renderSettings() {
   return Promise.all([
     getSetting('org'), getSetting('categories'), getSetting('defaultFormFields'),
@@ -3172,7 +3373,7 @@ function renderSettings() {
         defaultFormFields = res[2] || [], mailTemplates = res[3] || {},
         sendLog = res[4] || [], uiState = res[5] || {}, events = res[6];
 
-    var active = uiState.lastTab || 'general';
+    var active = session.settingsTab || uiState.lastTab || 'general';
     if (!SETTINGS_TABS.some(function (t) { return t.key === active; })) active = 'general';
 
     var host = el('div', { class: 'card' });
@@ -3181,10 +3382,7 @@ function renderSettings() {
       return el('button', {
         class: 'btn' + (t.key === active ? ' btn--primary' : ''),
         text: t.label,
-        onclick: function () {
-          // UI状態は localStorage ではなく settings.uiState に保持する
-          setSetting('uiState', Object.assign({}, uiState, { lastTab: t.key })).then(router);
-        }
+        onclick: function () { selectSettingsTab(t.key); }
       });
     }));
 
@@ -3700,7 +3898,7 @@ function publicShell(title, children, org, showBanner) {
     el('div', { class: 'public' }, [
       banner,
       org.intro ? el('p', { class: 'muted', style: 'white-space:pre-wrap', text: org.intro }) : null,
-      el('div', { class: 'pagehead' }, [el('h1', { class: 'pagehead__title', text: title })])
+      title ? el('div', { class: 'pagehead' }, [el('h1', { class: 'pagehead__title', text: title })]) : null
     ].filter(Boolean).concat(children || []))
   ]);
 }
@@ -3732,7 +3930,10 @@ function publicEventVisible(event) {
 /* ------------------------------------------------------------
    S-10 公開イベント一覧（F-26）— 参加者側の唯一の入口
    ------------------------------------------------------------ */
-var publicListState = { q: '', category: '' };
+var publicListState = { q: '', category: '', format: '', from: '' };
+
+/* 参加者トップのキャッチコピー（Issue #3） */
+var PUBLIC_HEADLINE = '新しい知識と出会いが、未来をつくる。';
 
 function renderPublicList() {
   return Promise.all([storeGetAllRaw(STORE_EVENTS), getSetting('categories'), getSetting('org')])
@@ -3740,61 +3941,123 @@ function renderPublicList() {
       var events = res[0], categories = res[1] || [], org = res[2] || {};
       var s = publicListState;
 
-      var open = events.filter(publicEventVisible).filter(function (ev) {
-        if (s.q && ev.title.toLowerCase().indexOf(s.q.toLowerCase()) < 0) return false;
+      var visible = events.filter(publicEventVisible);
+      var open = visible.filter(function (ev) {
+        if (s.q && ev.title.toLowerCase().indexOf(s.q.toLowerCase()) < 0 &&
+            (ev.description || '').toLowerCase().indexOf(s.q.toLowerCase()) < 0) return false;
         if (s.category && ev.category !== s.category) return false;
+        if (s.format && ev.format !== s.format) return false;
+        if (s.from && new Date(ev.startAt) < new Date(s.from)) return false;
         return true;
       });
       open.sort(function (a, b) { return new Date(a.startAt) - new Date(b.startAt); });
 
-      var qInput = searchInput({ placeholder: '例: ハンズオン', value: s.q }, s, function (v) {
+      /* ---- ヒーロー：ヘッダー画像の上にキャッチ、その下に検索 ---- */
+      var qInput = searchInput({ placeholder: 'イベント名・キーワード', value: s.q }, s, function (v) {
         s.q = v; router();
       });
-      var catSelect = selectInput(
+      var formatSel = selectInput([
+        { value: '', label: 'すべての開催形式' },
+        { value: 'venue', label: '会場' },
+        { value: 'online', label: 'オンライン' }
+      ], s.format, { class: 'input--sm' });
+      formatSel.addEventListener('change', function () { s.format = formatSel.value; router(); });
+
+      var catSel = selectInput(
         [{ value: '', label: 'すべてのカテゴリ' }].concat(categories.map(function (c) {
           return { value: c, label: c };
-        })), s.category);
-      catSelect.addEventListener('change', function () { s.category = catSelect.value; router(); });
+        })), s.category, { class: 'input--sm' });
+      catSel.addEventListener('change', function () { s.category = catSel.value; router(); });
 
+      var fromInput = el('input', { type: 'date', value: s.from });
+      fromInput.addEventListener('change', function () { s.from = fromInput.value; router(); });
+
+      var searchBar = el('div', { class: 'searchbar' }, [
+        el('div', { class: 'searchbar__field' }, [qInput]),
+        el('div', { class: 'searchbar__field' }, [formatSel]),
+        el('div', { class: 'searchbar__field' }, [catSel]),
+        el('div', { class: 'searchbar__field' }, [fromInput]),
+        el('button', { class: 'btn btn--primary searchbar__btn', text: '検索する',
+          onclick: function () { router(); } })
+      ]);
+
+      var hero = el('section', {
+        class: 'phero' + (org.headerImage ? '' : ' phero--plain'),
+        style: org.headerImage
+          ? 'background-image:linear-gradient(rgba(10,12,16,.62),rgba(10,12,16,.62)),url(' +
+            blobUrl(org.headerImage) + ');background-size:cover;background-position:center'
+          : ''
+      }, [
+        el('div', { class: 'phero__inner' }, [
+          el('h1', { class: 'phero__title', text: PUBLIC_HEADLINE }),
+          el('p', { class: 'phero__lead',
+            text: (org.name || '当社') + 'が主催するイベントで、学び・つながり・成長しよう。' }),
+          searchBar
+        ])
+      ]);
+
+      /* ---- 公開中のイベント：横並びカード。画像左上にカテゴリ ---- */
       var cards = open.map(function (ev) {
-        var sold = 0, cap = eventCapacity(ev);
-        var thumb = ev.coverImage
-          ? el('img', { class: 'eventcard__thumb', src: blobUrl(ev.coverImage), alt: '' })
-          // 画像未設定でも枠が崩れないよう、カテゴリ頭文字のプレースホルダを置く
-          : el('div', { class: 'eventcard__thumb eventcard__thumb--empty' },
+        var cap = eventCapacity(ev);
+        var media = ev.coverImage
+          ? el('img', { class: 'ecard__img', src: blobUrl(ev.coverImage), alt: '' })
+          : el('div', { class: 'ecard__img ecard__img--empty' },
               [el('span', { text: (ev.category || 'EVENT').slice(0, 1) })]);
-        return el('a', { class: 'eventcard', href: '#/public/' + ev.id }, [
-          thumb,
-          el('div', { class: 'eventcard__body' }, [
-            el('div', { class: 'eventcard__meta', text: formatDateTime(ev.startAt) }),
-            el('div', { class: 'eventcard__title', text: ev.title }),
-            el('div', { class: 'eventcard__meta', text:
-              (ev.format === 'online' ? 'オンライン' : ev.venue || '会場未定') }),
-            el('div', { class: 'stack' }, [
-              el('span', { class: 'badge badge--neutral', text: ev.category }),
+        return el('a', { class: 'ecard', href: '#/public/' + ev.id }, [
+          el('div', { class: 'ecard__media' }, [
+            media,
+            el('span', { class: 'ecard__cat', text: ev.category || '未分類' })
+          ]),
+          el('div', { class: 'ecard__body' }, [
+            el('div', { class: 'ecard__title', text: ev.title }),
+            el('div', { class: 'ecard__meta', text: formatDateTime(ev.startAt) }),
+            el('div', { class: 'ecard__meta',
+              text: ev.format === 'online' ? 'オンライン' : (ev.venue || '会場未定') }),
+            el('div', { class: 'ecard__tags' }, [
+              el('span', { class: 'badge badge--neutral', text: ev.category || '未分類' }),
               cap > 0 ? el('span', { class: 'muted', text: '定員 ' + cap + ' 名' }) : null
-            ])
+            ].filter(Boolean))
           ])
         ]);
       });
 
-      var lead = el('div', { class: 'public__lead' }, [
-        el('h2', { class: 'section__title',
-          text: (org.name || '当社') + 'が主催するイベントの申込ページです' }),
-        el('p', { class: 'muted', style: 'margin:0',
-          text: '参加したいイベントを選んでお申し込みください。お申込み後に発行される受付コードとメールアドレスで、'
-              + '「マイチケット」から申込内容の確認とキャンセルができます。ログインや会員登録は不要です。' })
+      var listSection = el('section', { class: 'psection' }, [
+        el('div', { class: 'psection__head' }, [
+          el('h2', { class: 'psection__title', text: '公開中のイベント' }),
+          el('span', { class: 'muted', text: open.length + ' 件' })
+        ]),
+        open.length === 0
+          ? el('div', { class: 'card' }, [el('div', { class: 'empty',
+              text: visible.length === 0
+                ? '現在公開中のイベントはありません。'
+                : '条件に一致するイベントがありません。' })])
+          : el('div', { class: 'ecards' }, cards)
       ]);
 
-      return publicShell('開催予定のイベント', [
-        lead,
-        el('div', { class: 'toolbar' }, [qInput, catSelect])
-      ].concat(open.length === 0
-        ? [el('div', { class: 'card' }, [el('div', { class: 'empty',
-            text: events.filter(publicEventVisible).length === 0
-              ? '現在公開中のイベントはありません。'
-              : '条件に一致するイベントがありません。' })])]
-        : cards), org, true);
+      /* ---- カテゴリから探す ---- */
+      var catChips = [{ value: '', label: 'すべて' }].concat(categories.map(function (c) {
+        return { value: c, label: c };
+      })).map(function (c) {
+        var count = c.value
+          ? visible.filter(function (ev) { return ev.category === c.value; }).length
+          : visible.length;
+        return el('button', {
+          class: 'catchip' + (s.category === c.value ? ' is-active' : ''),
+          onclick: function () { s.category = c.value; router(); }
+        }, [
+          el('span', { class: 'catchip__label', text: c.label }),
+          el('span', { class: 'catchip__count', text: String(count) })
+        ]);
+      });
+
+      var catSection = el('section', { class: 'psection' }, [
+        el('div', { class: 'psection__head' }, [
+          el('h2', { class: 'psection__title', text: 'カテゴリから探す' })
+        ]),
+        el('div', { class: 'catchips' }, catChips)
+      ]);
+
+      return publicShell(null, [hero, listSection, catSection], org, false);
     });
 }
 
@@ -4422,8 +4685,10 @@ function renderFiles() {
       pageHead('資料'),
       el('div', { class: 'card' }, [
         el('p', { class: 'muted', text: '進行台本・会場図・配布資料など、イベント運営に使う資料の置き場です。イベント単位ではなく組織全体で共有します。' }),
-        el('div', { class: 'alert', style: 'background:var(--color-warning-bg);color:var(--color-warning-text)',
-          text: 'ファイルはこの端末のブラウザ内にのみ保存されます。他のメンバーとは共有されません。受け渡しにはJSONの書き出し（設定・データ管理）を使ってください。' }),
+        el('div', { class: 'alert', style: 'background:var(--color-warning-bg);color:var(--color-warning-text)' }, [
+          el('div', { text: 'ここに登録した資料は、本番構成では組織のメンバー間で共有されます。' }),
+          el('div', { text: '本課題は file:// 単体で動かすため、この端末のブラウザ内に閉じます。受け渡しにはJSONの書き出し（設定・データ管理）を使ってください。' })
+        ]),
         files.length === 0
           ? el('div', { class: 'empty', text: '資料はまだ登録されていません。' })
           : el('table', {}, [
@@ -4466,6 +4731,7 @@ function boot() {
   window.addEventListener('hashchange', router);
   ensureSettings()
     .then(refreshOrgCache)
+    .then(refreshUiCache)
     .then(function () { router(); })
     .catch(function (err) {
       console.error(err);
