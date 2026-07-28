@@ -200,6 +200,134 @@ tbody tr:hover { background: var(--color-surface-sub); }
   font-size: var(--font-size-sm);
 }
 
+/* ---------- フォーム部品（CLAUDE.md §8 フォームのUI規約） ---------- */
+.field { margin-bottom: var(--space-xl); }
+.field__label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--space-xs);
+}
+.field__req { color: var(--color-danger-text); margin-left: 2px; }
+.field__help {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-xs);
+}
+.field__error {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger-text);
+  margin-top: var(--space-xs);
+}
+.field__row { display: flex; gap: var(--space-md); align-items: center; flex-wrap: wrap; }
+
+input[type=text], input[type=email], input[type=url], input[type=number],
+input[type=datetime-local], input[type=password], select, textarea {
+  font-family: inherit;
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  background: var(--color-surface);
+  padding: var(--space-sm) var(--space-md);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  width: 100%;
+  max-width: 560px;
+}
+textarea { min-height: 140px; resize: vertical; line-height: var(--line-height); }
+input.is-invalid, select.is-invalid, textarea.is-invalid { border-color: var(--color-danger-text); }
+input[type=number] { max-width: 160px; }
+input[type=datetime-local] { max-width: 260px; }
+.input--sm { max-width: 260px; }
+
+.radio { display: inline-flex; align-items: center; gap: var(--space-xs); font-size: var(--font-size-sm); }
+.radio input { margin: 0; }
+
+.section {
+  border-top: var(--border);
+  padding-top: var(--space-xl);
+  margin-top: var(--space-xl);
+}
+.section__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 var(--space-xs);
+}
+.section__note { font-size: var(--font-size-xs); color: var(--color-text-muted); margin: 0 0 var(--space-lg); }
+
+.subcard {
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  background: var(--color-surface);
+}
+.subcard__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+.subcard__title { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+
+.formbar {
+  position: sticky;
+  bottom: 0;
+  background: var(--color-bg);
+  border-top: var(--border);
+  padding: var(--space-lg) 0;
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.alert {
+  border-radius: var(--radius-sm);
+  padding: var(--space-md) var(--space-lg);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-lg);
+}
+.alert--danger { background: var(--color-danger-bg); color: var(--color-danger-text); }
+.alert ul { margin: var(--space-xs) 0 0; padding-left: var(--space-xl); }
+
+.toolbar {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-lg);
+}
+.toolbar input[type=text], .toolbar select { max-width: 220px; }
+
+.pager {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: var(--space-lg);
+  font-size: var(--font-size-sm);
+}
+
+.toast {
+  position: fixed;
+  right: var(--space-xl);
+  bottom: var(--space-xl);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  padding: var(--space-md) var(--space-xl);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-sm);
+  z-index: 50;
+}
+
+.thumb {
+  max-width: 320px;
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  display: block;
+  margin-bottom: var(--space-sm);
+}
+
 /* ---------- 公開側（管理画面と別レイアウト） ---------- */
 .public { max-width: 960px; margin: 0 auto; padding: var(--space-2xl) var(--space-xl); }
 .public__head {
@@ -393,6 +521,164 @@ function el(tag, attrs, children) {
     node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
   });
   return node;
+}
+
+/* ------------------------------------------------------------
+   T2-1 共通UI基盤 — 日時変換
+   日時は ISO 8601 で保持し、表示・入力時に変換する
+   ------------------------------------------------------------ */
+function toLocalInput(isoStr) {
+  if (!isoStr) return '';
+  var d = new Date(isoStr);
+  var p = function (n) { return String(n).padStart(2, '0'); };
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+    'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function fromLocalInput(value) {
+  if (!value) return null;
+  var d = new Date(value);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+/* ------------------------------------------------------------
+   T2-1 共通UI基盤 — エラーメッセージ
+   文面は 仕様決定シート.md E節の唯一の正。ここで言い換えない
+   ------------------------------------------------------------ */
+var MSG = {
+  required: function (label) { return label + 'を入力してください'; },
+  select:   function (label) { return label + 'を選択してください'; },
+  maxLength: function (label, n) { return label + 'は' + n + '文字以内で入力してください'; },
+  format:   function (label) { return label + 'の形式が正しくありません'; },
+  range:    function (label, min, max) { return label + 'は' + min + '以上' + max + '以下で入力してください'; },
+  after:    function (label, baseLabel) { return label + 'は' + baseLabel + 'より後の日時を指定してください'; },
+  // シート E節に「〜以前」の型が無いため P10 に従い同じ文体で補った（シートへの追加が必要）
+  before:   function (label, baseLabel) { return label + 'は' + baseLabel + '以前の日時を指定してください'; },
+  capacityShrink: function (n) { return 'すでに' + n + '件の申込があるため、定員を' + n + '未満にはできません'; },
+  ticketDelete: '申込のある券種は削除できません',
+  noTicket: '公開するには券種を1件以上登録してください',
+  categoryInUse: 'このカテゴリを使用しているイベントがあるため削除できません',
+  imageTooLarge: '画像は2MB以内のファイルを選択してください'
+};
+
+/* ------------------------------------------------------------
+   T2-1 共通UI基盤 — フォーム部品
+   規約: 公開時必須には赤い * ／ 直下にヘルプ文 ／ プレースホルダは記入例
+   ------------------------------------------------------------ */
+function field(opts, control) {
+  var errorEl = el('div', { class: 'field__error' });
+  var label = el('label', { class: 'field__label' }, [
+    document.createTextNode(opts.label),
+    opts.required ? el('span', { class: 'field__req', text: '*' }) : null
+  ]);
+  var node = el('div', { class: 'field' }, [
+    label,
+    control,
+    opts.help ? el('div', { class: 'field__help', text: opts.help }) : null,
+    errorEl
+  ]);
+  node.__error = errorEl;
+  node.__control = control;
+  return node;
+}
+
+function setFieldError(fieldNode, message) {
+  if (!fieldNode) return;
+  fieldNode.__error.textContent = message || '';
+  var c = fieldNode.__control;
+  var target = c.tagName === 'DIV' ? null : c;
+  if (target) target.classList.toggle('is-invalid', !!message);
+}
+
+function textInput(attrs) { return el('input', Object.assign({ type: 'text' }, attrs)); }
+
+function selectInput(options, value, attrs) {
+  var sel = el('select', attrs || {});
+  options.forEach(function (o) {
+    var v = typeof o === 'string' ? o : o.value;
+    var t = typeof o === 'string' ? o : o.label;
+    var op = el('option', { value: v, text: t });
+    if (v === value) op.selected = true;
+    sel.appendChild(op);
+  });
+  return sel;
+}
+
+function radioInput(name, options, value) {
+  var wrap = el('div', { class: 'field__row' });
+  options.forEach(function (o) {
+    var input = el('input', { type: 'radio', name: name, value: o.value });
+    if (o.value === value) input.checked = true;
+    wrap.appendChild(el('label', { class: 'radio' }, [input, document.createTextNode(o.label)]));
+  });
+  wrap.value = function () {
+    var checked = wrap.querySelector('input:checked');
+    return checked ? checked.value : null;
+  };
+  wrap.setValue = function (v) {
+    var target = wrap.querySelector('input[value="' + v + '"]');
+    if (target) target.checked = true;
+  };
+  return wrap;
+}
+
+function toast(message) {
+  var t = el('div', { class: 'toast', text: message });
+  document.body.appendChild(t);
+  setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2600);
+}
+
+function errorSummary(messages) {
+  return el('div', { class: 'alert alert--danger' }, [
+    el('div', { text: '入力内容を確認してください（' + messages.length + '件）' }),
+    el('ul', {}, messages.map(function (m) { return el('li', { text: m }); }))
+  ]);
+}
+
+/* ------------------------------------------------------------
+   T2-1 共通UI基盤 — 画像の読み込みとリサイズ（D-15 / D-37 / D-38）
+   CLAUDE.md §1 #8 の例外：FileReader で読み込んだ自前の画像なので
+   canvas への描画と toBlob() が可能
+   ------------------------------------------------------------ */
+var IMAGE_MIME = ['image/png', 'image/jpeg', 'image/webp'];
+var IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+
+function readAndResizeImage(file, maxEdge) {
+  return new Promise(function (resolve, reject) {
+    if (IMAGE_MIME.indexOf(file.type) < 0) { reject(new Error(MSG.format('画像'))); return; }
+    if (file.size > IMAGE_MAX_BYTES) { reject(new Error(MSG.imageTooLarge)); return; }
+    var reader = new FileReader();
+    reader.onerror = function () { reject(new Error(MSG.format('画像'))); };
+    reader.onload = function () {
+      var img = new Image();
+      img.onerror = function () { reject(new Error(MSG.format('画像'))); };
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var scale = Math.min(1, maxEdge / Math.max(w, h));
+        var cw = Math.max(1, Math.round(w * scale));
+        var ch = Math.max(1, Math.round(h * scale));
+        var canvas = document.createElement('canvas');
+        canvas.width = cw; canvas.height = ch;
+        canvas.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        canvas.toBlob(function (blob) {
+          if (!blob) { reject(new Error(MSG.format('画像'))); return; }
+          resolve(blob);
+        }, 'image/jpeg', 0.85);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+var objectUrls = [];
+function blobUrl(blob) {
+  var url = URL.createObjectURL(blob);
+  objectUrls.push(url);
+  return url;
+}
+function revokeObjectUrls() {
+  objectUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+  objectUrls = [];
 }
 
 /* ------------------------------------------------------------
@@ -645,6 +931,7 @@ function resolve(path) {
 var appEl = null;
 
 function router() {
+  revokeObjectUrls();   // 前の画面で作った Blob URL を解放してから描画する
   var path = currentPath();
   var hit = resolve(path);
 
@@ -816,55 +1103,670 @@ function statRow(label, value) {
 /* ------------------------------------------------------------
    画面 — S-02 イベント一覧（F-04）
    ------------------------------------------------------------ */
+var EVENTS_PER_PAGE = 20;   // F-04 ページング
+var eventListState = { q: '', category: '', status: '', page: 1 };
+
 function renderEventList() {
-  return Promise.all([storeGetAllRaw(STORE_EVENTS), storeGetAllRaw(STORE_ENTRIES)])
-    .then(function (res) {
-      var events = res[0], entries = res[1];
-      // D-36 既定の並び順：開始日時の降順
-      events.sort(function (a, b) { return new Date(b.startAt) - new Date(a.startAt); });
+  return Promise.all([
+    storeGetAllRaw(STORE_EVENTS), storeGetAllRaw(STORE_ENTRIES), getSetting('categories')
+  ]).then(function (res) {
+    var events = res[0], entries = res[1], categories = res[2] || [];
+    var s = eventListState;
 
-      var body = events.map(function (ev) {
-        var st = eventStatusLabel(ev);
-        return el('tr', {}, [
-          el('td', {}, [el('a', { href: '#/events/' + ev.id, text: ev.title })]),
-          el('td', {}, [el('span', { class: 'badge ' + st.cls, text: st.text })]),
-          el('td', { text: ev.category }),
-          el('td', { text: formatDateTime(ev.startAt) }),
-          el('td', { text: confirmedCount(entries, ev.id) + ' / ' + eventCapacity(ev) })
-        ]);
-      });
+    // 絞り込み（F-04）
+    var filtered = events.filter(function (ev) {
+      if (s.q && ev.title.toLowerCase().indexOf(s.q.toLowerCase()) < 0) return false;
+      if (s.category && ev.category !== s.category) return false;
+      if (s.status === 'published') return ev.status === 'published' && !isFinished(ev);
+      if (s.status === 'draft') return ev.status === 'draft';
+      if (s.status === 'finished') return isFinished(ev);
+      return true;
+    });
 
-      return el('div', {}, [
-        pageHead('イベント', [
-          el('a', { class: 'btn btn--primary', href: '#/events/new', text: 'イベントを作成' })
+    // D-36 既定の並び順：開始日時の降順
+    filtered.sort(function (a, b) { return new Date(b.startAt) - new Date(a.startAt); });
+
+    var totalPages = Math.max(1, Math.ceil(filtered.length / EVENTS_PER_PAGE));
+    if (s.page > totalPages) s.page = totalPages;
+    var pageItems = filtered.slice((s.page - 1) * EVENTS_PER_PAGE, s.page * EVENTS_PER_PAGE);
+
+    function reload() { router(); }
+
+    var qInput = textInput({ placeholder: '例: ハンズオン', value: s.q });
+    qInput.addEventListener('input', function () {
+      s.q = qInput.value; s.page = 1; s.focusSearch = true; reload();
+    });
+    if (s.focusSearch) {
+      setTimeout(function () {
+        qInput.focus();
+        qInput.setSelectionRange(qInput.value.length, qInput.value.length);
+      }, 0);
+    }
+
+    var catSelect = selectInput(
+      [{ value: '', label: 'すべてのカテゴリ' }].concat(categories.map(function (c) {
+        return { value: c, label: c };
+      })), s.category);
+    catSelect.addEventListener('change', function () { s.category = catSelect.value; s.page = 1; reload(); });
+
+    var statusSelect = selectInput([
+      { value: '', label: 'すべての状態' },
+      { value: 'published', label: '公開中' },
+      { value: 'draft', label: '公開前' },
+      { value: 'finished', label: '終了' }
+    ], s.status);
+    statusSelect.addEventListener('change', function () { s.status = statusSelect.value; s.page = 1; reload(); });
+
+    var body = pageItems.map(function (ev) {
+      var st = eventStatusLabel(ev);
+      return el('tr', {}, [
+        el('td', {}, [
+          el('a', { href: '#/events/' + ev.id, text: ev.title }),
+          ev.seriesId ? el('span', { class: 'badge badge--neutral', text: 'シリーズ' }) : null
         ]),
-        el('div', { class: 'card' }, [
-          events.length === 0
-            ? el('div', { class: 'empty', text: 'イベントがまだありません。「イベントを作成」から追加してください。' })
-            : el('table', {}, [
+        el('td', {}, [el('span', { class: 'badge ' + st.cls, text: st.text })]),
+        el('td', { text: ev.category }),
+        el('td', { text: formatDateTime(ev.startAt) }),
+        el('td', { text: confirmedCount(entries, ev.id) + ' / ' + eventCapacity(ev) }),
+        el('td', {}, [
+          el('div', { class: 'stack' }, [
+            el('button', { class: 'btn', text: '複製', onclick: function () { duplicateEvent(ev); } }),
+            el('button', { class: 'btn btn--danger', text: '削除',
+              onclick: function () { deleteEvent(ev, entries); } })
+          ])
+        ])
+      ]);
+    });
+
+    var pager = el('div', { class: 'pager' }, [
+      el('span', { class: 'muted', text: filtered.length + ' 件中 ' +
+        (filtered.length === 0 ? 0 : (s.page - 1) * EVENTS_PER_PAGE + 1) + '〜' +
+        Math.min(s.page * EVENTS_PER_PAGE, filtered.length) + ' 件' }),
+      el('button', { class: 'btn', text: '前へ', disabled: s.page <= 1 ? 'disabled' : null,
+        onclick: function () { s.page--; reload(); } }),
+      el('span', { text: s.page + ' / ' + totalPages }),
+      el('button', { class: 'btn', text: '次へ', disabled: s.page >= totalPages ? 'disabled' : null,
+        onclick: function () { s.page++; reload(); } })
+    ]);
+
+    return el('div', {}, [
+      pageHead('イベント', [
+        el('a', { class: 'btn btn--primary', href: '#/events/new', text: 'イベントを作成' })
+      ]),
+      el('div', { class: 'card' }, [
+        el('div', { class: 'toolbar' }, [qInput, catSelect, statusSelect]),
+        filtered.length === 0
+          ? el('div', { class: 'empty', text: events.length === 0
+              ? 'イベントがまだありません。「イベントを作成」から追加してください。'
+              : '条件に一致するイベントがありません。' })
+          : el('div', {}, [
+              el('table', {}, [
                 el('thead', {}, [el('tr', {}, [
                   el('th', { text: 'イベント名' }), el('th', { text: '状態' }),
                   el('th', { text: 'カテゴリ' }), el('th', { text: '開催日時' }),
-                  el('th', { text: '申込 / 定員' })
+                  el('th', { text: '申込 / 定員' }), el('th', { text: '' })
                 ])]),
                 el('tbody', {}, body)
-              ])
-        ]),
-        wip('T2-2', '検索・絞り込み・ページング・複製を実装する')
-      ]);
+              ]),
+              pager
+            ])
+      ])
+    ]);
+  });
+}
+
+/* F-05 イベント複製・シリーズ設定
+   複製元にシリーズIDが無ければ、複製時に採番して両方へ付与する */
+function duplicateEvent(source) {
+  var now = Date.now();
+  var seriesId = source.seriesId || uid('series');
+  var copy = JSON.parse(JSON.stringify({
+    title: source.title, description: source.description, format: source.format,
+    venue: source.venue, onlineUrl: source.onlineUrl, category: source.category,
+    startAt: source.startAt, endAt: source.endAt, deadline: source.deadline,
+    ticketTypes: source.ticketTypes, formFields: source.formFields
+  }));
+  // 券種・フォーム項目のIDは振り直す（申込は引き継がない）
+  copy.ticketTypes = (copy.ticketTypes || []).map(function (t) {
+    return Object.assign({}, t, { id: uid('tt') });
+  });
+  copy.formFields = (copy.formFields || []).map(function (f) {
+    return Object.assign({}, f, { id: uid('ff') });
+  });
+  var duplicated = Object.assign(copy, {
+    id: uid('ev'),
+    title: source.title + '（複製）',
+    status: 'draft',                       // 複製は必ず下書きから（D-29）
+    seriesId: seriesId,
+    coverImage: source.coverImage || null,
+    attachments: [],
+    createdAt: iso(now),
+    updatedAt: iso(now)
+  });
+
+  var chain = source.seriesId
+    ? Promise.resolve()
+    : store.put(STORE_EVENTS, Object.assign({}, source, { seriesId: seriesId, updatedAt: iso(now) }));
+
+  chain.then(function () { return store.put(STORE_EVENTS, duplicated); })
+    .then(function () {
+      toast('イベントを複製しました。下書きとして保存しています。');
+      navigate('/events/' + duplicated.id + '/edit');
+    });
+}
+
+/* F-02 イベント削除（D-04 申込があれば件数を示して確認、承諾時は entries も連動削除） */
+function deleteEvent(ev, allEntries) {
+  var related = allEntries.filter(function (e) { return e.eventId === ev.id; });
+  var message = related.length > 0
+    ? '「' + ev.title + '」には ' + related.length + ' 件の申込があります。\n' +
+      'イベントを削除すると、これらの申込データもすべて削除されます。よろしいですか？'
+    : '「' + ev.title + '」を削除します。よろしいですか？';
+  if (!confirm(message)) return;
+
+  Promise.all(related.map(function (e) { return store.remove(STORE_ENTRIES, e.id); }))
+    .then(function () { return store.remove(STORE_EVENTS, ev.id); })
+    .then(function () {
+      toast('イベントを削除しました。');
+      router();
     });
 }
 
 /* ------------------------------------------------------------
    画面 — S-03 / S-04 / S-08 / S-15 / S-09（T2 以降で実装）
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   S-03 イベント作成／編集
+   T2-2 基本情報 / T2-4 券種（D-21〜D-25）/ T2-3 カスタム項目（D-28）
+   ------------------------------------------------------------ */
+var MAX_FORM_FIELDS = 10;      // D-28
+var MAX_FIELD_OPTIONS = 10;    // D-28
+var FIELD_TYPES = [
+  { value: 'text', label: '1行テキスト' },
+  { value: 'textarea', label: '複数行テキスト' },
+  { value: 'select', label: 'プルダウン' },
+  { value: 'radio', label: 'ラジオボタン' },
+  { value: 'checkbox', label: 'チェックボックス' }
+];
+
+function blankEvent(categories) {
+  return {
+    id: null,
+    title: '', description: '',
+    format: 'venue',                                     // D-16 初期値＝会場
+    venue: '', onlineUrl: '',
+    category: categories[0] || '',                       // D-12 初期値＝リストの先頭
+    startAt: null, endAt: null, deadline: null,
+    status: 'draft',                                     // D-29 初期値＝下書き
+    seriesId: null,
+    ticketTypes: [makeTicketType('一般', 20)],           // D-21 初期値＝「一般」
+    formFields: [],
+    coverImage: null,
+    attachments: []
+  };
+}
+
 function renderEventEdit(id) {
-  return el('div', {}, [
-    pageHead(id ? 'イベントを編集' : 'イベントを作成', [
-      el('a', { class: 'btn', href: '#/events', text: '一覧へ戻る' })
-    ]),
-    wip('T2-2 / T2-3 / T2-4', '基本情報・券種設定・フォーム項目定義を実装する（D-11〜D-29）')
-  ]);
+  return Promise.all([
+    id ? store.get(STORE_EVENTS, id) : Promise.resolve(null),
+    getSetting('categories'),
+    id ? store.byIndex(STORE_ENTRIES, 'eventId', id) : Promise.resolve([])
+  ]).then(function (res) {
+    var categories = res[1] || [];
+    if (id && !res[0]) return renderError('指定されたイベントが見つかりません');
+    var draft = res[0] ? JSON.parse(JSON.stringify(res[0])) : blankEvent(categories);
+    if (res[0] && res[0].coverImage) draft.coverImage = res[0].coverImage;  // Blob は JSON 化で落ちるため戻す
+    var entries = res[2] || [];
+    var isNew = !id;
+
+    if (categories.length === 0) {
+      return el('div', {}, [
+        pageHead('イベントを作成'),
+        el('div', { class: 'alert alert--danger' }, [
+          el('div', { text: 'カテゴリが1件も登録されていないため、イベントを作成できません。' }),
+          el('div', {}, [el('a', { href: '#/settings', text: '設定・データ管理でカテゴリを追加する' })])
+        ])
+      ]);
+    }
+
+    var fields = {};
+    var summaryHost = el('div');
+    var body = el('div', { class: 'card' });
+
+    /* ---------- 基本情報 ---------- */
+    fields.title = field(
+      { label: 'イベント名', required: true, help: '公開イベントページのタイトルとして表示されます。' },
+      textInput({ placeholder: '例: Git 基礎ハンズオン（第1回）', maxlength: '100', value: draft.title })
+    );
+
+    fields.category = field(
+      { label: 'カテゴリ', required: true, help: '公開イベント一覧の絞り込みに使われます。選択肢は設定・データ管理で編集できます。' },
+      selectInput(categories, draft.category, { class: 'input--sm' })
+    );
+
+    fields.startAt = field(
+      { label: '開始日時', required: true, help: '公開イベントページと一覧カードに表示されます。過去日時も登録できます。' },
+      el('input', { type: 'datetime-local', value: toLocalInput(draft.startAt) })
+    );
+
+    fields.endAt = field(
+      { label: '終了日時', required: true, help: 'この時刻を過ぎるとイベントは自動で「終了」になり、公開イベント一覧から外れます。' },
+      el('input', { type: 'datetime-local', value: toLocalInput(draft.endAt) })
+    );
+
+    /* D-15 カバー画像 */
+    var coverPreview = el('div');
+    var coverError = null;
+    function paintCover() {
+      coverPreview.textContent = '';
+      if (draft.coverImage) {
+        coverPreview.appendChild(el('img', { class: 'thumb', src: blobUrl(draft.coverImage), alt: 'カバー画像' }));
+        coverPreview.appendChild(el('button', {
+          class: 'btn', text: '画像を削除',
+          onclick: function () { draft.coverImage = null; paintCover(); }
+        }));
+      } else {
+        coverPreview.appendChild(el('div', { class: 'muted', text: '未設定' }));
+      }
+    }
+    var coverInput = el('input', { type: 'file', accept: IMAGE_MIME.join(',') });
+    coverInput.addEventListener('change', function () {
+      var f = coverInput.files && coverInput.files[0];
+      if (!f) return;
+      setFieldError(coverError, '');
+      readAndResizeImage(f, 1200).then(function (blob) {
+        draft.coverImage = blob;
+        paintCover();
+      }).catch(function (e) {
+        setFieldError(coverError, e.message);
+      }).then(function () { coverInput.value = ''; });
+    });
+    coverError = field(
+      { label: 'カバー画像', help: '公開イベントページのヘッダーと一覧カードに表示されます。推奨1200×400の横長バナー、2MBまで。保存時に長辺1200pxへ縮小されます。' },
+      el('div', {}, [coverInput, coverPreview])
+    );
+    fields.coverImage = coverError;
+    paintCover();
+
+    /* ---------- 会場・配信 ---------- */
+    var venueField = field(
+      { label: '会場名・住所', required: true, help: '公開イベントページの「場所」に表示されます。' },
+      textInput({ placeholder: '例: 本社 3F セミナールーム（東京都〇〇区…）', maxlength: '200', value: draft.venue })
+    );
+    var onlineField = field(
+      { label: '視聴URL', required: true, help: '公開イベントページに表示されます。参加者への案内メールにも差し込まれます。' },
+      el('input', { type: 'url', placeholder: '例: https://example.com/webinar/123', value: draft.onlineUrl })
+    );
+    fields.venue = venueField;
+    fields.onlineUrl = onlineField;
+
+    var formatRadio = radioInput('format', [
+      { value: 'venue', label: '会場' }, { value: 'online', label: 'オンライン' }
+    ], draft.format);
+    function syncFormat() {
+      var v = formatRadio.value();
+      venueField.style.display = v === 'venue' ? '' : 'none';
+      onlineField.style.display = v === 'online' ? '' : 'none';
+    }
+    formatRadio.addEventListener('change', syncFormat);
+    fields.format = field(
+      { label: '開催形式', required: true, help: '選んだ形式に応じて、会場名または視聴URLの入力欄が切り替わります。' },
+      formatRadio
+    );
+
+    /* ---------- 詳細 ---------- */
+    fields.description = field(
+      { label: '説明文', required: true, help: '公開イベントページの本文として表示されます。改行のみ反映され、装飾はできません。' },
+      el('textarea', { placeholder: '例: 新卒メンバー向けに、業務で使うGitの基本操作を90分で学びます。', maxlength: '2000' })
+    );
+    fields.description.__control.value = draft.description;
+
+    fields.deadline = field(
+      { label: '申込締切', required: true, help: 'この時刻を過ぎると公開イベントページから申し込めなくなります。締切時刻ちょうどは受け付けます。' },
+      el('input', { type: 'datetime-local', value: toLocalInput(draft.deadline) })
+    );
+
+    fields.status = field(
+      { label: '公開状態', required: true, help: '「公開」にすると公開イベント一覧に載り、申込を受け付けます。下書きのままなら誰にも見えません。' },
+      radioInput('status', [
+        { value: 'draft', label: '下書き' }, { value: 'published', label: '公開' }
+      ], draft.status)
+    );
+
+    /* ---------- 券種（T2-4 / D-21〜D-25） ---------- */
+    var ticketHost = el('div');
+    function paintTickets() {
+      ticketHost.textContent = '';
+      draft.ticketTypes.forEach(function (t, i) {
+        var sold = confirmedCount(entries, id, t.id);
+        var nameF = field({ label: '券種名', required: true, help: '申込フォームの選択肢として表示されます。' },
+          textInput({ placeholder: '例: 一般 / 学生 / 社員', maxlength: '50', value: t.name }));
+        var capF = field({ label: '定員', required: true,
+            help: sold > 0 ? 'この券種にはすでに ' + sold + ' 件の申込があります。' : 'この人数に達すると「満席」になり、申し込めなくなります。' },
+          el('input', { type: 'number', min: '1', max: '9999', step: '1', value: String(t.capacity) }));
+        var descF = field({ label: '券種の説明', help: '公開イベントページの券種欄に補足として表示されます。' },
+          textInput({ placeholder: '例: 社外の方向けの枠です', maxlength: '200', value: t.description || '' }));
+        var startF = field({ label: '販売開始', help: '空欄なら公開と同時に申込を受け付けます。' },
+          el('input', { type: 'datetime-local', value: toLocalInput(t.salesStart) }));
+        var endF = field({ label: '販売終了', help: '空欄なら申込締切まで受け付けます。申込締切より後には設定できません。' },
+          el('input', { type: 'datetime-local', value: toLocalInput(t.salesEnd) }));
+        var thF = field({ label: '残席表示の閾値', help: '残席がこの数以下のとき「残り○枚」と表示します。0 にすると常に表示しません。' },
+          el('input', { type: 'number', min: '0', max: '9999', step: '1', value: String(t.lowStockThreshold) }));
+
+        t.__f = { name: nameF, capacity: capF, description: descF, salesStart: startF, salesEnd: endF, threshold: thF };
+
+        ticketHost.appendChild(el('div', { class: 'subcard' }, [
+          el('div', { class: 'subcard__head' }, [
+            el('div', { class: 'subcard__title', text: '券種 ' + (i + 1) }),
+            el('button', {
+              class: 'btn btn--danger', text: '削除',
+              onclick: function () {
+                if (sold > 0) { alert(MSG.ticketDelete); return; }   // D-03
+                if (draft.ticketTypes.length <= 1) { alert(MSG.noTicket); return; }
+                readTickets();
+                draft.ticketTypes.splice(draft.ticketTypes.indexOf(t), 1);
+                paintTickets();
+              }
+            })
+          ]),
+          nameF, capF, descF,
+          el('div', { class: 'field__row' }, [startF, endF]),
+          thF
+        ]));
+      });
+    }
+    function readTickets() {
+      draft.ticketTypes.forEach(function (t) {
+        if (!t.__f) return;
+        t.name = t.__f.name.__control.value.trim();
+        t.capacity = parseInt(t.__f.capacity.__control.value, 10);
+        t.description = t.__f.description.__control.value.trim();
+        t.salesStart = fromLocalInput(t.__f.salesStart.__control.value);
+        t.salesEnd = fromLocalInput(t.__f.salesEnd.__control.value);
+        t.lowStockThreshold = parseInt(t.__f.threshold.__control.value, 10);
+      });
+    }
+    paintTickets();
+
+    /* ---------- カスタム項目（T2-3 / D-28） ---------- */
+    var fieldHost = el('div');
+    function paintFormFields() {
+      fieldHost.textContent = '';
+      draft.formFields.sort(function (a, b) { return a.order - b.order; });
+      draft.formFields.forEach(function (f, i) {
+        var labelF = field({ label: '項目名', required: true, help: '申込フォームの入力欄の見出しとして表示されます。' },
+          textInput({ placeholder: '例: 所属部署', maxlength: '50', value: f.label }));
+        var typeSel = selectInput(FIELD_TYPES, f.type, { class: 'input--sm' });
+        var typeF = field({ label: '入力形式' }, typeSel);
+        var optInput = textInput({ placeholder: '例: 1年未満, 1〜3年, 3年以上', value: (f.options || []).join(', ') });
+        var optF = field({ label: '選択肢', help: 'カンマ区切りで入力します。1件30文字まで、最大10件。' }, optInput);
+        var reqInput = el('input', { type: 'checkbox' });
+        reqInput.checked = !!f.required;
+        var reqF = field({ label: '必須にする', help: 'オンにすると、この項目が空のままでは申し込めません。' },
+          el('label', { class: 'radio' }, [reqInput, document.createTextNode('必須')]));
+
+        function syncType() {
+          var needsOptions = ['select', 'radio'].indexOf(typeSel.value) >= 0;
+          optF.style.display = needsOptions ? '' : 'none';
+        }
+        typeSel.addEventListener('change', syncType);
+        syncType();
+
+        f.__f = { label: labelF, type: typeF, options: optF, required: reqF, typeSel: typeSel, reqInput: reqInput, optInput: optInput };
+
+        fieldHost.appendChild(el('div', { class: 'subcard' }, [
+          el('div', { class: 'subcard__head' }, [
+            el('div', { class: 'subcard__title', text: '項目 ' + (i + 1) }),
+            el('div', { class: 'stack' }, [
+              el('button', { class: 'btn', text: '↑', disabled: i === 0 ? 'disabled' : null,
+                onclick: function () { readFormFields(); swapOrder(i, i - 1); } }),
+              el('button', { class: 'btn', text: '↓', disabled: i === draft.formFields.length - 1 ? 'disabled' : null,
+                onclick: function () { readFormFields(); swapOrder(i, i + 1); } }),
+              el('button', { class: 'btn btn--danger', text: '削除',
+                onclick: function () {
+                  readFormFields();
+                  draft.formFields.splice(draft.formFields.indexOf(f), 1);
+                  reorder(); paintFormFields();
+                } })
+            ])
+          ]),
+          labelF, typeF, optF, reqF
+        ]));
+      });
+    }
+    function swapOrder(a, b) {
+      var tmp = draft.formFields[a];
+      draft.formFields[a] = draft.formFields[b];
+      draft.formFields[b] = tmp;
+      reorder(); paintFormFields();
+    }
+    function reorder() {
+      draft.formFields.forEach(function (f, i) { f.order = i + 1; });
+    }
+    function readFormFields() {
+      draft.formFields.forEach(function (f) {
+        if (!f.__f) return;
+        f.label = f.__f.label.__control.value.trim();
+        f.type = f.__f.typeSel.value;
+        f.required = f.__f.reqInput.checked;
+        f.options = f.__f.optInput.value.split(',').map(function (s) { return s.trim(); })
+          .filter(function (s) { return s !== ''; });
+      });
+    }
+    paintFormFields();
+
+    /* ---------- 収集と検証 ---------- */
+    function collect() {
+      readTickets();
+      readFormFields();
+      reorder();
+      var format = formatRadio.value();
+      return {
+        title: fields.title.__control.value.trim(),
+        category: fields.category.__control.value,
+        startAt: fromLocalInput(fields.startAt.__control.value),
+        endAt: fromLocalInput(fields.endAt.__control.value),
+        deadline: fromLocalInput(fields.deadline.__control.value),
+        format: format,
+        venue: format === 'venue' ? fields.venue.__control.value.trim() : '',
+        onlineUrl: format === 'online' ? fields.onlineUrl.__control.value.trim() : '',
+        description: fields.description.__control.value,
+        status: fields.status.__control.value(),
+        coverImage: draft.coverImage || null,
+        ticketTypes: draft.ticketTypes,
+        formFields: draft.formFields
+      };
+    }
+
+    /* D-01 下書き保存はイベント名のみ必須。公開時に全必須項目を検証する */
+    function validate(v, forPublish) {
+      var errors = [];
+      Object.keys(fields).forEach(function (k) { setFieldError(fields[k], ''); });
+
+      function fail(f, msg) { setFieldError(f, msg); errors.push(msg); }
+
+      if (!v.title) fail(fields.title, MSG.required('イベント名'));
+      else if (v.title.length > 100) fail(fields.title, MSG.maxLength('イベント名', 100));
+
+      if (!forPublish) return errors;
+
+      if (!v.category) fail(fields.category, MSG.select('カテゴリ'));
+      if (!v.startAt) fail(fields.startAt, MSG.required('開始日時'));
+      if (!v.endAt) fail(fields.endAt, MSG.required('終了日時'));
+      if (v.startAt && v.endAt && new Date(v.endAt) <= new Date(v.startAt)) {
+        fail(fields.endAt, MSG.after('終了日時', '開始日時'));
+      }
+      if (!v.deadline) fail(fields.deadline, MSG.required('申込締切'));
+      if (v.deadline && v.startAt && new Date(v.deadline) > new Date(v.startAt)) {
+        fail(fields.deadline, MSG.before('申込締切', '開始日時'));  // D-26
+      }
+      if (v.format === 'venue' && !v.venue) fail(fields.venue, MSG.required('会場名・住所'));
+      if (v.format === 'venue' && v.venue.length > 200) fail(fields.venue, MSG.maxLength('会場名・住所', 200));
+      if (v.format === 'online') {
+        if (!v.onlineUrl) fail(fields.onlineUrl, MSG.required('視聴URL'));
+        else if (!/^https?:\/\/.+/.test(v.onlineUrl)) fail(fields.onlineUrl, MSG.format('視聴URL'));
+      }
+      if (!v.description) fail(fields.description, MSG.required('説明文'));
+      else if (v.description.length > 2000) fail(fields.description, MSG.maxLength('説明文', 2000));
+
+      // D-05 券種ゼロでは公開できない
+      if (v.ticketTypes.length === 0) errors.push(MSG.noTicket);
+
+      v.ticketTypes.forEach(function (t, i) {
+        var tag = '券種' + (i + 1) + 'の';
+        if (!t.name) fail(t.__f.name, MSG.required(tag + '券種名'));
+        else if (t.name.length > 50) fail(t.__f.name, MSG.maxLength(tag + '券種名', 50));
+
+        if (!(t.capacity >= 1 && t.capacity <= 9999)) {          // D-22
+          fail(t.__f.capacity, MSG.range(tag + '定員', 1, 9999));
+        } else {
+          var sold = confirmedCount(entries, id, t.id);           // D-02
+          if (t.capacity < sold) fail(t.__f.capacity, MSG.capacityShrink(sold));
+        }
+        if (!(t.lowStockThreshold >= 0 && t.lowStockThreshold <= 9999)) {  // D-25
+          fail(t.__f.threshold, MSG.range(tag + '残席表示の閾値', 0, 9999));
+        }
+        if (t.salesStart && t.salesEnd && new Date(t.salesEnd) <= new Date(t.salesStart)) {
+          fail(t.__f.salesEnd, MSG.after(tag + '販売終了', '販売開始'));
+        }
+        if (t.salesEnd && v.deadline && new Date(t.salesEnd) > new Date(v.deadline)) {  // D-24
+          fail(t.__f.salesEnd, MSG.before(tag + '販売終了', '申込締切'));
+        }
+      });
+
+      // D-28 カスタム項目
+      if (v.formFields.length > MAX_FORM_FIELDS) {
+        errors.push('カスタム項目は' + MAX_FORM_FIELDS + '件以内で設定してください');
+      }
+      v.formFields.forEach(function (f, i) {
+        var tag = 'カスタム項目' + (i + 1) + 'の';
+        if (!f.label) fail(f.__f.label, MSG.required(tag + '項目名'));
+        else if (f.label.length > 50) fail(f.__f.label, MSG.maxLength(tag + '項目名', 50));
+        if (['select', 'radio'].indexOf(f.type) >= 0) {
+          if (f.options.length === 0) fail(f.__f.options, MSG.required(tag + '選択肢'));
+          else if (f.options.length > MAX_FIELD_OPTIONS) {
+            fail(f.__f.options, tag + '選択肢は' + MAX_FIELD_OPTIONS + '件以内で入力してください');
+          } else if (f.options.some(function (o) { return o.length > 30; })) {
+            fail(f.__f.options, tag + '選択肢は1件30文字以内で入力してください');
+          }
+        }
+      });
+
+      return errors;
+    }
+
+    function save(nextStatus) {
+      // ボタンの操作を D-29 の公開状態ラジオへ反映し、表示と保存内容を一致させる
+      fields.status.__control.setValue(nextStatus);
+      var v = collect();
+      var forPublish = v.status === 'published';
+      var errors = validate(v, forPublish);
+
+      summaryHost.textContent = '';
+      if (errors.length > 0) {
+        summaryHost.appendChild(errorSummary(errors));
+        summaryHost.scrollIntoView({ block: 'nearest' });
+        return;
+      }
+
+      var now = iso(Date.now());
+      var record = Object.assign({}, res[0] || {}, v, {
+        id: id || uid('ev'),
+        seriesId: draft.seriesId || null,
+        attachments: draft.attachments || [],
+        createdAt: (res[0] && res[0].createdAt) || now,
+        updatedAt: now
+      });
+      // 保存用に内部作業プロパティを落とす
+      record.ticketTypes = v.ticketTypes.map(function (t) {
+        return { id: t.id, name: t.name, capacity: t.capacity, description: t.description,
+                 salesStart: t.salesStart, salesEnd: t.salesEnd, lowStockThreshold: t.lowStockThreshold };
+      });
+      record.formFields = v.formFields.map(function (f) {
+        return { id: f.id, label: f.label, type: f.type, options: f.options,
+                 required: f.required, order: f.order };
+      });
+
+      store.put(STORE_EVENTS, record).then(function () {
+        toast(isNew ? 'イベントを作成しました。' : 'イベントを保存しました。');
+        navigate('/events/' + record.id);
+      });
+    }
+
+    /* ---------- 組み立て ---------- */
+    body.appendChild(summaryHost);
+    body.appendChild(el('p', { class: 'muted',
+      text: '「*」の付いた項目は公開時に必須です。下書きのまま保存する場合はイベント名だけで保存できます。' }));
+    body.appendChild(fields.title);
+    body.appendChild(fields.category);
+    body.appendChild(fields.startAt);
+    body.appendChild(fields.endAt);
+    body.appendChild(fields.deadline);
+    body.appendChild(fields.coverImage);
+
+    body.appendChild(el('div', { class: 'section' }, [
+      el('h2', { class: 'section__title', text: '会場・配信' }),
+      fields.format, venueField, onlineField
+    ]));
+
+    body.appendChild(el('div', { class: 'section' }, [
+      el('h2', { class: 'section__title', text: '詳細' }),
+      fields.description
+    ]));
+
+    body.appendChild(el('div', { class: 'section' }, [
+      el('h2', { class: 'section__title', text: '券種' }),
+      el('p', { class: 'section__note', text: '公開するには券種が1件以上必要です。定員は券種ごとに判定されます。' }),
+      ticketHost,
+      el('button', {
+        class: 'btn', text: '券種を追加',
+        onclick: function () {
+          readTickets();
+          draft.ticketTypes.push(makeTicketType('一般', 20));
+          paintTickets();
+        }
+      })
+    ]));
+
+    body.appendChild(el('div', { class: 'section' }, [
+      el('h2', { class: 'section__title', text: '申込フォームのカスタム項目' }),
+      el('p', { class: 'section__note',
+        text: '氏名とメールアドレスは常に必須項目として取得します。ここでは追加で聞きたいことだけを設定してください（最大' + MAX_FORM_FIELDS + '件）。' }),
+      fieldHost,
+      el('button', {
+        class: 'btn', text: '項目を追加',
+        onclick: function () {
+          readFormFields();
+          if (draft.formFields.length >= MAX_FORM_FIELDS) {
+            alert('カスタム項目は' + MAX_FORM_FIELDS + '件以内で設定してください');
+            return;
+          }
+          draft.formFields.push({ id: uid('ff'), label: '', type: 'text', options: [],
+                                  required: false, order: draft.formFields.length + 1 });
+          paintFormFields();
+        }
+      })
+    ]));
+
+    body.appendChild(el('div', { class: 'section' }, [
+      el('h2', { class: 'section__title', text: '公開状態' }),
+      fields.status
+    ]));
+
+    syncFormat();
+
+    return el('div', {}, [
+      pageHead(isNew ? 'イベントを作成' : 'イベントを編集', [
+        el('a', { class: 'btn', href: id ? '#/events/' + id : '#/events', text: 'やめる' })
+      ]),
+      body,
+      el('div', { class: 'formbar' }, [
+        el('button', { class: 'btn', text: '下書きとして保存', onclick: function () { save('draft'); } }),
+        el('button', { class: 'btn btn--primary', text: '公開する', onclick: function () { save('published'); } }),
+        el('span', { class: 'muted', text: '公開すると公開イベント一覧に載り、申込を受け付けます。' })
+      ])
+    ]);
+  });
 }
 
 function renderEventDetail(id) {
