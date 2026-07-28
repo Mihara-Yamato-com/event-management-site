@@ -124,6 +124,20 @@ a { color: inherit; }
   font-weight: var(--font-weight-medium);
 }
 
+.sidebar__toggle {
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  padding: var(--space-xs) var(--space-md) var(--space-xs) var(--space-2xl);
+}
+.sidebar__toggle:hover { color: var(--color-text); }
+
 .sidebar__sub {
   display: flex;
   flex-direction: column;
@@ -396,7 +410,6 @@ th, td {
   border-bottom: var(--border);
   vertical-align: middle;
 }
-tbody tr:last-child td { border-bottom: none; }
 
 /* 行の内容で列幅が動くとボタン位置がずれるため固定する（Issue #4） */
 .table--fixed { table-layout: fixed; }
@@ -550,6 +563,16 @@ input[type=datetime-local] { max-width: 260px; }
 .alert--danger { background: var(--color-danger-bg); color: var(--color-danger-text); }
 .alert ul { margin: var(--space-xs) 0 0; padding-left: var(--space-xl); }
 
+.seriesgrid { display: flex; gap: var(--space-2xl); flex-wrap: wrap; }
+.seriesblock {
+  border: var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  min-width: 220px;
+}
+.seriesblock__head { margin-bottom: var(--space-md); }
+.seriesblock__title { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+
 .chartrow { display: flex; gap: var(--space-2xl); align-items: center; flex-wrap: wrap; }
 .legend { display: flex; flex-direction: column; gap: var(--space-sm); }
 .legend__item {
@@ -686,7 +709,7 @@ input[type=datetime-local] { max-width: 260px; }
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  min-height: 300px;
+  min-height: 390px;
   justify-content: center;
 }
 .phero__title {
@@ -726,6 +749,8 @@ input[type=datetime-local] { max-width: 260px; }
   gap: var(--space-lg);
   margin-bottom: var(--space-lg);
 }
+/* 見出しのすぐ右に補足を置きたいときに使う（Issue #5） */
+.psection__head--left { justify-content: flex-start; gap: var(--space-lg); }
 .psection__title { font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); margin: 0; }
 
 .ecards {
@@ -1347,6 +1372,14 @@ function eventStatusLabel(event) {
   return { text: '公開前', cls: 'badge--warning' };
 }
 
+/* 申込の状態表示（Issue #5）
+   受付が済んで初めて「参加確定」とする。それまでは「申し込み済み」 */
+function entryStateLabel(entry) {
+  if (entry.state === 'cancelled') return { text: 'キャンセル済み', cls: 'badge--danger' };
+  if (entry.checkedInAt) return { text: '参加確定', cls: 'badge--success' };
+  return { text: '申し込み済み', cls: 'badge--warning' };
+}
+
 function confirmedCount(entries, eventId, ticketTypeId) {
   return entries.filter(function (e) {
     return e.eventId === eventId && e.state === 'confirmed' &&
@@ -1556,7 +1589,7 @@ function seedDemoData() {
    セッション（F-27）
    ログイン状態はメモリ上のみ。ページ再読込で解除される
    ------------------------------------------------------------ */
-var session = { authenticated: false, orgName: '', orgLogoUrl: null, settingsTab: 'general' };
+var session = { authenticated: false, orgName: '', orgLogoUrl: null, settingsTab: 'general', settingsNavOpen: true };
 
 /* ヘッダー表示用に組織情報をメモリへ載せる。ロゴの Blob URL は差し替え時に解放する */
 function refreshUiCache() {
@@ -1591,6 +1624,7 @@ var routes = [
   { screen: 'S-12', auth: null,  pattern: /^\/login$/,                         render: renderLogin },
   { screen: 'S-10', auth: false, pattern: /^\/public$/,                        render: renderPublicList },
   { screen: 'S-05', auth: false, pattern: /^\/public\/([^/]+)$/,               render: renderPublicEvent },
+  { screen: 'S-05', auth: true,  pattern: /^\/preview\/([^/]+)$/,              render: renderPreviewEvent },
   { screen: 'S-06', auth: false, pattern: /^\/public\/([^/]+)\/apply$/,        render: renderApplyForm },
   { screen: 'S-13', auth: false, pattern: /^\/public\/([^/]+)\/confirm$/,      render: renderApplyConfirm },
   { screen: 'S-07', auth: false, pattern: /^\/public\/([^/]+)\/done$/,         render: renderApplyDone },
@@ -1669,16 +1703,27 @@ function renderShell(screenId, contentNode) {
       href: '#' + item.path
     }, [navIcon(item.icon), el('span', { text: item.label })]));
 
-    // 設定・データ管理は子項目（タブ）まで開いて見せる（Issue #3）
+    // 設定・データ管理は子項目（タブ）まで開いて見せる（Issue #3）。開閉できる（Issue #5）
     if (item.path === '/settings' && active) {
-      nav.appendChild(el('div', { class: 'sidebar__sub' }, SETTINGS_TABS.map(function (t) {
-        return el('a', {
-          class: 'sidebar__sublink' + (session.settingsTab === t.key ? ' is-active' : ''),
-          href: '#/settings',
-          text: t.label,
-          onclick: function () { selectSettingsTab(t.key); }
-        });
-      })));
+      var toggle = el('button', {
+        class: 'sidebar__toggle',
+        'aria-expanded': session.settingsNavOpen ? 'true' : 'false',
+        onclick: function () { session.settingsNavOpen = !session.settingsNavOpen; router(); }
+      }, [
+        el('span', { text: session.settingsNavOpen ? '▾' : '▸' }),
+        el('span', { text: session.settingsNavOpen ? '項目を閉じる' : '項目を開く' })
+      ]);
+      nav.appendChild(toggle);
+      if (session.settingsNavOpen) {
+        nav.appendChild(el('div', { class: 'sidebar__sub' }, SETTINGS_TABS.map(function (t) {
+          return el('a', {
+            class: 'sidebar__sublink' + (session.settingsTab === t.key ? ' is-active' : ''),
+            href: '#/settings',
+            text: t.label,
+            onclick: function () { selectSettingsTab(t.key); }
+          });
+        })));
+      }
     }
   });
 
@@ -1822,11 +1867,6 @@ function renderDashboard() {
       var fillRate = totalCapacity > 0 ? Math.round(liveConfirmed.length / totalCapacity * 100) : 0;
       var checkinRate = confirmed.length > 0 ? Math.round(checkedIn.length / confirmed.length * 100) : 0;
 
-      /* 画像2 の FEATURED EVENT に相当。直近に開催する公開中のイベント */
-      var featured = live.slice().sort(function (a, b) {
-        return new Date(a.startAt) - new Date(b.startAt);
-      })[0] || null;
-
       /* カテゴリ別の開催件数（円グラフ用）。件数の多い順 */
       var byCategory = {};
       events.forEach(function (ev) {
@@ -1863,14 +1903,25 @@ function renderDashboard() {
         series[ev.seriesId].capacity += eventCapacity(ev);
       });
       var seriesKeys = Object.keys(series);
-      var seriesRows = seriesKeys.map(function (k) {
+      var seriesBlocks = seriesKeys.map(function (k) {
         var g = series[k];
         g.events.sort(function (a, b) { return new Date(a.startAt) - new Date(b.startAt); });
-        return el('tr', {}, [
-          el('td', { text: g.events[0].title }),
-          el('td', { text: g.events.length + ' 回' }),
-          el('td', { text: g.confirmed + ' / ' + g.capacity }),
-          el('td', { text: g.events.map(function (e) { return confirmedCount(entries, e.id); }).join(' → ') })
+        var bars = g.events.map(function (e, i) {
+          return {
+            label: '第' + (i + 1) + '回',
+            value: confirmedCount(entries, e.id),
+            muted: e.status === 'draft'      // 下書きはグレーで示す
+          };
+        });
+        return el('div', { class: 'seriesblock' }, [
+          el('div', { class: 'seriesblock__head' }, [
+            el('div', { class: 'seriesblock__title', text: g.events[0].title }),
+            el('div', { class: 'muted', text: g.events.length + ' 回・累計 ' +
+              g.confirmed + ' / ' + g.capacity + ' 名' })
+          ]),
+          barChart(bars),
+          el('div', { class: 'muted', style: 'font-size:var(--font-size-xs)',
+            text: '左が第1回。グレーの棒は下書きのイベント。' })
         ]);
       });
 
@@ -1878,24 +1929,6 @@ function renderDashboard() {
         pageHead('ダッシュボード', [
           el('a', { class: 'btn btn--primary', href: '#/events/new', text: 'イベントを作成' })
         ]),
-        featured ? el('div', { class: 'card hero' }, [
-          el('div', { class: 'hero__body' }, [
-            eyebrow('FEATURED EVENT'),
-            el('h2', { class: 'hero__title', text: featured.title }),
-            el('p', { class: 'muted hero__desc', text: (featured.description || '').slice(0, 90) }),
-            el('a', { class: 'btn btn--primary', href: '#/events/' + featured.id, text: '詳細を見る' })
-          ]),
-          featured.coverImage
-            ? el('img', { class: 'hero__image', src: blobUrl(featured.coverImage), alt: '' })
-            : el('div', { class: 'hero__image hero__image--empty' }, [
-                el('div', { class: 'hero__date' }, [
-                  el('div', { text: formatDateTime(featured.startAt).split(' ')[0] }),
-                  el('div', { class: 'muted', text: formatDateTime(featured.startAt).split(' ')[1] }),
-                  el('div', { class: 'muted', text: featured.format === 'online'
-                    ? 'ONLINE' : (featured.venue || '') })
-                ])
-              ])
-        ]) : null,
         el('div', { class: 'tiles' }, [
           tile('公開中のイベント', live.length + ' 件', '下書き ' + drafts.length + ' 件'),
           tile('申込（参加確定）', confirmed.length + ' 件', 'キャンセルを除く'),
@@ -1926,13 +1959,7 @@ function renderDashboard() {
           el('p', { class: 'section__note', text: 'イベントを複製するとシリーズとして束ねられ、回ごとの動員推移を追えます。' }),
           seriesKeys.length === 0
             ? el('div', { class: 'empty', text: 'シリーズに属するイベントはありません。' })
-            : el('table', {}, [
-                el('thead', {}, [el('tr', {}, [
-                  el('th', { text: 'シリーズ' }), el('th', { text: '開催回数' }),
-                  el('th', { text: '累計 申込 / 定員' }), el('th', { text: '回ごとの申込' })
-                ])]),
-                el('tbody', {}, seriesRows)
-              ])
+            : el('div', { class: 'seriesgrid' }, seriesBlocks)
         ])
       ]);
     });
@@ -1997,6 +2024,55 @@ function pieLegend(slices) {
         (total ? Math.round(sl.value / total * 100) : 0) + '%' })
     ]);
   }));
+}
+
+/* 縦棒グラフ。左端が第1回（Issue #5）。外部ライブラリは使えないため SVG を自前で描く */
+function barChart(bars, opts) {
+  opts = opts || {};
+  var w = opts.barWidth || 34, gap = opts.gap || 14, h = opts.height || 120;
+  var labelH = 22, valueH = 16;
+  var max = Math.max(1, bars.reduce(function (n, b) { return Math.max(n, b.value); }, 0));
+  var width = bars.length * w + Math.max(0, bars.length - 1) * gap;
+  var total = h + labelH + valueH;
+
+  var svg = svgEl('svg', {
+    width: width, height: total, viewBox: '0 0 ' + width + ' ' + total,
+    role: 'img', 'aria-label': opts.label || '回ごとの申込数'
+  });
+  // 目盛りの基準線
+  svg.appendChild(svgEl('line', {
+    x1: 0, y1: valueH + h, x2: width, y2: valueH + h,
+    stroke: 'var(--color-border)', 'stroke-width': 1
+  }));
+
+  bars.forEach(function (b, i) {
+    var x = i * (w + gap);
+    var bh = Math.max(2, Math.round(b.value / max * h));
+    var y = valueH + h - bh;
+    var rect = svgEl('rect', {
+      x: x, y: y, width: w, height: bh,
+      rx: 3, fill: b.muted ? 'var(--color-border)' : 'var(--color-chart-line)'
+    });
+    var title = svgEl('title', {});
+    title.textContent = b.label + ' ' + b.value + '件';
+    rect.appendChild(title);
+    svg.appendChild(rect);
+
+    var value = svgEl('text', {
+      x: x + w / 2, y: y - 5, 'text-anchor': 'middle',
+      'font-size': '11', fill: 'var(--color-text-muted)'
+    });
+    value.textContent = String(b.value);
+    svg.appendChild(value);
+
+    var label = svgEl('text', {
+      x: x + w / 2, y: valueH + h + 15, 'text-anchor': 'middle',
+      'font-size': '11', fill: 'var(--color-text-muted)'
+    });
+    label.textContent = b.label;
+    svg.appendChild(label);
+  });
+  return svg;
 }
 
 function tile(label, value, note, rate) {
@@ -2077,10 +2153,10 @@ function renderEventList() {
         el('td', {}, [ev.coverImage
           ? el('img', { class: 'rowthumb', src: blobUrl(ev.coverImage), alt: '' })
           : el('span', { class: 'rowthumb', text: (ev.category || '—').slice(0, 1) })]),
-        el('td', {}, [
-          el('a', { href: '#/events/' + ev.id, text: ev.title }),
-          ev.seriesId ? el('span', { class: 'badge badge--neutral', text: 'シリーズ' }) : null
-        ]),
+        el('td', {}, [el('a', { href: '#/events/' + ev.id, text: ev.title })]),
+        el('td', {}, [ev.seriesId
+          ? el('span', { class: 'badge badge--neutral', text: 'シリーズ' })
+          : el('span', { class: 'muted', text: '—' })]),
         el('td', {}, [el('span', { class: 'badge ' + st.cls, text: st.text })]),
         el('td', { text: ev.category }),
         el('td', { text: formatDateTime(ev.startAt) }),
@@ -2120,12 +2196,13 @@ function renderEventList() {
               el('table', { class: 'table--fixed' }, [
                 el('colgroup', {}, [
                   el('col', { style: 'width:80px' }), el('col', {}),
-                  el('col', { style: 'width:100px' }), el('col', { style: 'width:120px' }),
-                  el('col', { style: 'width:170px' }), el('col', { style: 'width:120px' }),
-                  el('col', { style: 'width:180px' })
+                  el('col', { style: 'width:90px' }), el('col', { style: 'width:100px' }),
+                  el('col', { style: 'width:120px' }), el('col', { style: 'width:170px' }),
+                  el('col', { style: 'width:120px' }), el('col', { style: 'width:180px' })
                 ]),
                 el('thead', {}, [el('tr', {}, [
-                  el('th', { text: '' }), el('th', { text: 'イベント名' }), el('th', { text: '状態' }),
+                  el('th', { text: '' }), el('th', { text: 'イベント名' }), el('th', { text: 'シリーズ' }),
+                  el('th', { text: '状態' }),
                   el('th', { text: 'カテゴリ' }), el('th', { text: '開催日時' }),
                   el('th', { text: '申込 / 定員' }), el('th', { class: 'cell-actions', text: '操作' })
                 ])]),
@@ -2963,7 +3040,7 @@ function renderEventDetail(id) {
 
     return el('div', {}, [
       pageHead(ev.title, [
-        el('a', { class: 'btn', href: '#/public/' + ev.id, text: 'プレビュー' }),
+        el('a', { class: 'btn', href: '#/preview/' + ev.id, text: 'プレビュー' }),
         el('button', { class: 'btn', text: '共有リンクを生成', onclick: shareLink }),
         el('button', { class: 'btn', text: '告知文を生成', onclick: announce }),
         el('a', { class: 'btn', href: '#/events/' + ev.id + '/entries', text: '参加者一覧' }),
@@ -3103,7 +3180,7 @@ function renderEntryList(eventId) {
       function (v) { s.q = v; s.page = 1; router(); });
     var stateSel = selectInput([
       { value: '', label: 'すべての状態' },
-      { value: 'confirmed', label: '参加確定' },
+      { value: 'confirmed', label: '申込あり（未受付・参加確定）' },
       { value: 'cancelled', label: 'キャンセル済み' }
     ], s.state);
     stateSel.addEventListener('change', function () { s.state = stateSel.value; s.page = 1; router(); });
@@ -3256,18 +3333,14 @@ function renderEntryList(eventId) {
       toast('CSVを出力しました（' + rows.length + '件）。');
     }
 
-    var stateBadge = {
-      confirmed: ['参加確定', 'badge--success'],
-      cancelled: ['キャンセル済み', 'badge--danger']
-    };
     var body = pageItems.map(function (en) {
-      var sb = stateBadge[en.state] || ['—', 'badge--neutral'];
+      var sb = entryStateLabel(en);
       return el('tr', {}, [
         el('td', { text: en.code }),
         el('td', { text: en.name }),
         el('td', { text: en.email }),
         el('td', { text: ticketName[en.ticketTypeId] || '—' }),
-        el('td', {}, [el('span', { class: 'badge ' + sb[1], text: sb[0] })]),
+        el('td', {}, [el('span', { class: 'badge ' + sb.cls, text: sb.text })]),
         el('td', { text: en.checkedInAt ? formatDateTime(en.checkedInAt) : '—' }),
         // キャンセル済みでもボタンを消さず無効化する。数が変わると位置がずれるため（Issue #4）
         el('td', { class: 'cell-actions' }, [el('div', { class: 'stack' }, [
@@ -3309,8 +3382,8 @@ function renderEntryList(eventId) {
       ]),
       el('div', { class: 'card' }, [
         el('table', {}, [el('tbody', {}, [
-          statRow('参加確定', confirmed.length + ' 件 / 定員 ' + eventCapacity(ev) + ' 名'),
-          statRow('受付済み', checkedIn.length + ' 件' +
+          statRow('申込（キャンセルを除く）', confirmed.length + ' 件 / 定員 ' + eventCapacity(ev) + ' 名'),
+          statRow('参加確定（受付済み）', checkedIn.length + ' 件' +
             (confirmed.length > 0 ? '（チェックイン率 ' + Math.round(checkedIn.length / confirmed.length * 100) + '%）' : '')),
           statRow('キャンセル', all.filter(function (e) { return e.state === 'cancelled'; }).length + ' 件')
         ])])
@@ -4193,7 +4266,7 @@ function renderPublicList() {
 
       var catSection = el('section', { class: 'psection' }, [
         el('div', { class: 'container' }, [
-          el('div', { class: 'psection__head' }, [
+          el('div', { class: 'psection__head psection__head--left' }, [
             el('h2', { class: 'psection__title', text: 'カテゴリから探す' }),
             s.browse
               ? el('button', { class: 'btn', text: '選択を解除',
@@ -4225,7 +4298,12 @@ function renderPublicList() {
 /* ------------------------------------------------------------
    S-05 公開イベントページ（F-08 / F-10 / F-31）
    ------------------------------------------------------------ */
-function renderPublicEvent(eventId) {
+/* S-04 からのプレビュー。管理者が見るため申込導線を出さない（Issue #5） */
+function renderPreviewEvent(eventId) {
+  return renderPublicEvent(eventId, true);
+}
+
+function renderPublicEvent(eventId, preview) {
   return Promise.all([
     store.get(STORE_EVENTS, eventId),
     store.byIndex(STORE_ENTRIES, 'eventId', eventId),
@@ -4261,7 +4339,14 @@ function renderPublicEvent(eventId) {
     });
 
     var notice = null;
-    if (ev.status === 'draft') {
+    if (preview) {
+      notice = el('div', { class: 'alert', style: 'background:var(--color-warning-bg);color:var(--color-warning-text)' }, [
+        el('div', { text: '主催者向けのプレビューです。参加者にはこの帯と下の注記は表示されません。' }),
+        el('div', { text: ev.status === 'draft'
+          ? 'このイベントは下書きのため、参加者にはまだ表示されていません。'
+          : '申込の操作はできません。実際の動作を試す場合は公開ページから開いてください。' })
+      ]);
+    } else if (ev.status === 'draft') {
       notice = el('div', { class: 'alert alert--danger',
         text: 'これは下書きのプレビューです。参加者にはまだ表示されていません。' });
     } else if (finished) {
@@ -4285,12 +4370,17 @@ function renderPublicEvent(eventId) {
         el('h2', { class: 'section__title', text: '券種' }),
         el('table', {}, [el('tbody', {}, ticketRows)])
       ]) : null,
-      el('div', { class: 'formbar' }, [
-        anyAvailable
-          ? el('a', { class: 'btn btn--primary', href: '#/public/' + ev.id + '/apply', text: '申し込む' })
-          : el('button', { class: 'btn', text: '申し込む', disabled: 'disabled' }),
-        el('a', { class: 'btn', href: '#/lookup', text: '申込を確認する' })
-      ])
+      // プレビューでは申込導線を出さない（管理者が申し込むことはないため）
+      preview
+        ? el('div', { class: 'formbar' }, [
+            el('a', { class: 'btn', href: '#/events/' + ev.id, text: 'イベント詳細へ戻る' })
+          ])
+        : el('div', { class: 'formbar' }, [
+            anyAvailable
+              ? el('a', { class: 'btn btn--primary', href: '#/public/' + ev.id + '/apply', text: '申し込む' })
+              : el('button', { class: 'btn', text: '申し込む', disabled: 'disabled' }),
+            el('a', { class: 'btn', href: '#/lookup', text: '申込を確認する' })
+          ])
     ]);
 
     return publicShell(ev.title, [notice, body].filter(Boolean), org);
@@ -4733,7 +4823,10 @@ function ticketCard(entry, ev, refresh) {
   var badge;
   if (entry.state === 'cancelled') badge = el('span', { class: 'badge badge--danger', text: 'キャンセル済み' });
   else if (finished) badge = el('span', { class: 'badge badge--neutral', text: '終了' });
-  else badge = el('span', { class: 'badge badge--success', text: '参加確定' });
+  else {
+    var sl = entryStateLabel(entry);
+    badge = el('span', { class: 'badge ' + sl.cls, text: sl.text });
+  }
 
   var actions = [];
   var note = null;
