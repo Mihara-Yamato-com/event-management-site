@@ -124,19 +124,20 @@ a { color: inherit; }
   font-weight: var(--font-weight-medium);
 }
 
-.sidebar__toggle {
+.sidebar__caret {
   font-family: inherit;
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
+  margin-left: auto;
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-text-muted);
+  color: inherit;
+  opacity: .6;
   font-size: var(--font-size-xs);
-  padding: var(--space-xs) var(--space-md) var(--space-xs) var(--space-2xl);
+  line-height: 1;
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
 }
-.sidebar__toggle:hover { color: var(--color-text); }
+.sidebar__caret:hover { opacity: 1; background: var(--color-border); }
 
 .sidebar__sub {
   display: flex;
@@ -1698,32 +1699,39 @@ function renderShell(screenId, contentNode) {
   var nav = el('nav', { class: 'sidebar__nav' });
   ADMIN_NAV.forEach(function (item) {
     var active = item.path === '/' ? path === '/' : path.indexOf(item.path) === 0;
-    nav.appendChild(el('a', {
+    var link = el('a', {
       class: 'sidebar__link' + (active ? ' sidebar__link--active' : ''),
       href: '#' + item.path
-    }, [navIcon(item.icon), el('span', { text: item.label })]));
+    }, [navIcon(item.icon), el('span', { text: item.label })]);
 
-    // 設定・データ管理は子項目（タブ）まで開いて見せる（Issue #3）。開閉できる（Issue #5）
-    if (item.path === '/settings' && active) {
-      var toggle = el('button', {
-        class: 'sidebar__toggle',
+    // 設定・データ管理は見出しの右の ▼ で子項目を開閉する（Issue #6）
+    if (item.path === '/settings') {
+      link.appendChild(el('button', {
+        class: 'sidebar__caret',
         'aria-expanded': session.settingsNavOpen ? 'true' : 'false',
-        onclick: function () { session.settingsNavOpen = !session.settingsNavOpen; router(); }
-      }, [
-        el('span', { text: session.settingsNavOpen ? '▾' : '▸' }),
-        el('span', { text: session.settingsNavOpen ? '項目を閉じる' : '項目を開く' })
-      ]);
-      nav.appendChild(toggle);
-      if (session.settingsNavOpen) {
-        nav.appendChild(el('div', { class: 'sidebar__sub' }, SETTINGS_TABS.map(function (t) {
-          return el('a', {
-            class: 'sidebar__sublink' + (session.settingsTab === t.key ? ' is-active' : ''),
-            href: '#/settings',
-            text: t.label,
-            onclick: function () { selectSettingsTab(t.key); }
-          });
-        })));
-      }
+        'aria-label': session.settingsNavOpen ? '子項目を閉じる' : '子項目を開く',
+        text: session.settingsNavOpen ? '▾' : '▸',
+        onclick: function (e) {
+          e.preventDefault();
+          e.stopPropagation();          // 親リンクの遷移を止める
+          session.settingsNavOpen = !session.settingsNavOpen;
+          router();
+        }
+      }));
+    }
+    nav.appendChild(link);
+
+    // 開いていれば、いまどの画面にいても子項目を出して直接移動できる（Issue #6）
+    if (item.path === '/settings' && session.settingsNavOpen) {
+      nav.appendChild(el('div', { class: 'sidebar__sub' }, SETTINGS_TABS.map(function (t) {
+        var current = active && session.settingsTab === t.key;
+        return el('a', {
+          class: 'sidebar__sublink' + (current ? ' is-active' : ''),
+          href: '#/settings',
+          text: t.label,
+          onclick: function () { selectSettingsTab(t.key); }
+        });
+      })));
     }
   });
 
@@ -3194,6 +3202,8 @@ function renderEntryList(eventId) {
 
     var confirmed = all.filter(function (e) { return e.state === 'confirmed'; });
     var checkedIn = confirmed.filter(function (e) { return e.checkedInAt; });
+    var checkinRate = confirmed.length > 0
+      ? Math.round(checkedIn.length / confirmed.length * 100) : 0;
 
     /* F-16 チェックイン */
     function toggleCheckIn(entry) {
@@ -3380,13 +3390,12 @@ function renderEntryList(eventId) {
       pageHead(ev.title + ' — 参加者', [
         el('a', { class: 'btn', href: '#/events/' + ev.id, text: 'イベント詳細へ' })
       ]),
-      el('div', { class: 'card' }, [
-        el('table', {}, [el('tbody', {}, [
-          statRow('申込（キャンセルを除く）', confirmed.length + ' 件 / 定員 ' + eventCapacity(ev) + ' 名'),
-          statRow('参加確定（受付済み）', checkedIn.length + ' 件' +
-            (confirmed.length > 0 ? '（チェックイン率 ' + Math.round(checkedIn.length / confirmed.length * 100) + '%）' : '')),
-          statRow('キャンセル', all.filter(function (e) { return e.state === 'cancelled'; }).length + ' 件')
-        ])])
+      el('div', { class: 'tiles' }, [
+        tile('申込（キャンセルを除く）', confirmed.length + ' 件', '定員 ' + eventCapacity(ev) + ' 名'),
+        tile('参加確定（受付済み）', checkedIn.length + ' 件',
+          checkedIn.length + ' / ' + confirmed.length + ' 名', checkinRate),
+        tile('未受付', (confirmed.length - checkedIn.length) + ' 件', '申し込み済みのまま'),
+        tile('キャンセル', all.filter(function (e) { return e.state === 'cancelled'; }).length + ' 件', '取消済み')
       ]),
       el('div', { class: 'card' }, [
         el('div', { class: 'toolbar' }, [
