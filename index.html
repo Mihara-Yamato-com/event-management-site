@@ -248,7 +248,7 @@ a { color: inherit; }
   justify-content: space-between;
   gap: var(--space-lg);
 }
-.main__inner { max-width: var(--content-max-width); }
+.main__inner { width: 100%; }   /* 画面幅いっぱいに使う（Issue #4） */
 
 .pagehead {
   min-height: var(--header-height);
@@ -378,6 +378,8 @@ a { color: inherit; }
   cursor: pointer;
 }
 .btn:hover { background: var(--color-surface-sub); }
+.btn[disabled] { opacity: .38; cursor: default; }
+.btn[disabled]:hover { background: var(--color-surface); }
 .btn--primary {
   background: var(--color-accent);
   color: var(--color-accent-text);
@@ -395,6 +397,12 @@ th, td {
   vertical-align: middle;
 }
 tbody tr:last-child td { border-bottom: none; }
+
+/* 行の内容で列幅が動くとボタン位置がずれるため固定する（Issue #4） */
+.table--fixed { table-layout: fixed; }
+.table--fixed td, .table--fixed th { overflow: hidden; text-overflow: ellipsis; }
+.cell-actions { white-space: nowrap; }
+.cell-actions .stack { flex-wrap: nowrap; justify-content: flex-end; }
 th { color: var(--color-text-muted); font-weight: var(--font-weight-medium); }
 tbody tr:hover { background: var(--color-surface-sub); }
 
@@ -652,22 +660,33 @@ input[type=datetime-local] { max-width: 260px; }
 }
 
 /* ---------- 参加者トップ（Issue #3 / i3c） ---------- */
+.publicmain { flex: 1 1 auto; }
+
+/* 画面幅いっぱい・角丸なし（Issue #4） */
 .phero {
-  border-radius: var(--radius-lg);
-  overflow: hidden;
+  width: 100%;
   margin-bottom: var(--space-2xl);
   background-color: #1D222B;
   color: #FFFFFF;
+}
+/* 中身は左右に余白を取り中央寄せする */
+.container {
+  max-width: var(--content-max-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--space-2xl);
 }
 .phero--plain {
   background-image: linear-gradient(135deg, #232936 0%, #454F63 100%);
 }
 .phero__inner {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
   padding: var(--space-3xl) var(--space-2xl);
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  min-height: 260px;
+  min-height: 300px;
   justify-content: center;
 }
 .phero__title {
@@ -699,6 +718,7 @@ input[type=datetime-local] { max-width: 260px; }
 .searchbar__btn { flex: 0 0 auto; padding: var(--space-sm) var(--space-xl); }
 
 .psection { margin-bottom: var(--space-3xl); }
+.psection:last-child { padding-bottom: var(--space-3xl); }
 .psection__head {
   display: flex;
   align-items: baseline;
@@ -710,7 +730,7 @@ input[type=datetime-local] { max-width: 260px; }
 
 .ecards {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: var(--space-lg);
 }
 .ecard {
@@ -725,6 +745,17 @@ input[type=datetime-local] { max-width: 260px; }
   min-width: 0;
 }
 .ecard:hover { box-shadow: var(--shadow-md); }
+.ecard--past .ecard__img { filter: grayscale(.55); opacity: .8; }
+.ecard__state {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral-text);
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-sm);
+}
 .ecard__media { position: relative; }
 .ecard__img {
   width: 100%;
@@ -1332,7 +1363,7 @@ function eventCapacity(event) {
    ------------------------------------------------------------ */
 function ensureSettings() {
   var defaults = {
-    org: { name: 'NCT', logo: null, headerImage: null, intro: '' },   // F-09
+    org: { name: 'NCT', logo: null, headerImage: null },              // F-09 組織ブランディング
     categories: DEFAULT_CATEGORIES.slice(),                            // D-12
     defaultFormFields: defaultFormFieldSet(),                          // F-07 / D-42
     mailTemplates: { invite: '', reminder: '', announce: '' },         // F-19 / F-29
@@ -1891,7 +1922,7 @@ function renderDashboard() {
               ])
         ]),
         el('div', { class: 'card' }, [
-          el('h2', { class: 'section__title', text: 'シリーズ横断の実績（改善⑤）' }),
+          el('h2', { class: 'section__title', text: 'シリーズ横断の実績' }),
           el('p', { class: 'section__note', text: 'イベントを複製するとシリーズとして束ねられ、回ごとの動員推移を追えます。' }),
           seriesKeys.length === 0
             ? el('div', { class: 'empty', text: 'シリーズに属するイベントはありません。' })
@@ -2054,7 +2085,7 @@ function renderEventList() {
         el('td', { text: ev.category }),
         el('td', { text: formatDateTime(ev.startAt) }),
         el('td', { text: confirmedCount(entries, ev.id) + ' / ' + eventCapacity(ev) }),
-        el('td', {}, [
+        el('td', { class: 'cell-actions' }, [
           el('div', { class: 'stack' }, [
             el('button', { class: 'btn', text: '複製', onclick: function () { duplicateEvent(ev); } }),
             el('button', { class: 'btn btn--danger', text: '削除',
@@ -2086,11 +2117,17 @@ function renderEventList() {
               ? 'イベントがまだありません。「イベントを作成」から追加してください。'
               : '条件に一致するイベントがありません。' })
           : el('div', {}, [
-              el('table', {}, [
+              el('table', { class: 'table--fixed' }, [
+                el('colgroup', {}, [
+                  el('col', { style: 'width:80px' }), el('col', {}),
+                  el('col', { style: 'width:100px' }), el('col', { style: 'width:120px' }),
+                  el('col', { style: 'width:170px' }), el('col', { style: 'width:120px' }),
+                  el('col', { style: 'width:180px' })
+                ]),
                 el('thead', {}, [el('tr', {}, [
                   el('th', { text: '' }), el('th', { text: 'イベント名' }), el('th', { text: '状態' }),
                   el('th', { text: 'カテゴリ' }), el('th', { text: '開催日時' }),
-                  el('th', { text: '申込 / 定員' }), el('th', { text: '' })
+                  el('th', { text: '申込 / 定員' }), el('th', { class: 'cell-actions', text: '操作' })
                 ])]),
                 el('tbody', {}, body)
               ]),
@@ -2776,13 +2813,93 @@ function renderEventDetail(id) {
   return Promise.all([
     store.get(STORE_EVENTS, id),
     store.byIndex(STORE_ENTRIES, 'eventId', id),
-    getSetting('mailTemplates')
+    getSetting('mailTemplates'),
+    storeGetAllRaw(STORE_FILES)
   ]).then(function (res) {
     var ev = res[0], entries = res[1], templates = res[2] || {};
     if (!ev) return renderError('指定されたイベントが見つかりません');
+    var myFiles = (res[3] || []).filter(function (f) { return f.eventId === id; });
+    var eventFilesCard = el('div', { class: 'card' }, [
+      el('div', { class: 'stack', style: 'justify-content:space-between' }, [
+        el('h2', { class: 'section__title', text: 'このイベントの資料' }),
+        el('a', { class: 'btn', href: '#/files', text: '資料を登録' })
+      ]),
+      myFiles.length === 0
+        ? el('div', { class: 'empty', text: 'このイベントに紐付いた資料はありません。' })
+        : el('table', {}, [el('tbody', {}, myFiles.map(function (f) {
+            return el('tr', {}, [
+              el('td', { text: f.name }),
+              el('td', { text: f.note || '—' }),
+              el('td', { class: 'cell-actions' }, [
+                el('button', { class: 'btn', text: 'ダウンロード',
+                  onclick: function () { downloadFile(f.name, f.blob); } })
+              ])
+            ]);
+          }))])
+    ]);
     var st = eventStatusLabel(ev);
     var confirmed = confirmedCount(entries, ev.id);
     var capacity = eventCapacity(ev);
+
+    /* 運営体制の編集。イベント編集画面へ行かずにここで追加・削除できる（Issue #4） */
+    function editStaff() {
+      var staff = JSON.parse(JSON.stringify(ev.staff || { owner: '', members: [] }));
+      if (!staff.members) staff.members = [];
+      var ownerF = field({ label: '責任者', help: 'このイベント全体の責任を持つ人です。' },
+        textInput({ placeholder: '例: 三原 大和', maxlength: '50', value: staff.owner || '' }));
+      var host = el('div');
+
+      function read() {
+        staff.members.forEach(function (m) {
+          if (!m.__n) return;
+          m.name = m.__n.value.trim();
+          m.role = m.__r.value.trim();
+        });
+      }
+      function paint() {
+        host.textContent = '';
+        if (staff.members.length === 0) {
+          host.appendChild(el('div', { class: 'muted', text: '運営メンバーは登録されていません。' }));
+        }
+        staff.members.forEach(function (m) {
+          var nameI = textInput({ placeholder: '例: 山田 太郎', maxlength: '50', value: m.name || '' });
+          var roleI = textInput({ placeholder: '例: 受付／司会／記録', maxlength: '50', value: m.role || '' });
+          m.__n = nameI; m.__r = roleI;
+          host.appendChild(el('div', { class: 'field__row' }, [
+            nameI, roleI,
+            el('button', { class: 'btn btn--danger', text: '削除', onclick: function () {
+              read();
+              staff.members.splice(staff.members.indexOf(m), 1);
+              paint();
+            } })
+          ]));
+        });
+      }
+      paint();
+
+      openModal('運営体制を編集', [
+        ownerF,
+        el('div', { class: 'field' }, [
+          el('label', { class: 'field__label', text: '運営メンバー' }),
+          host,
+          el('div', { class: 'field__help', text: '左に氏名、右に担当を入力します。' })
+        ]),
+        el('button', { class: 'btn', text: 'メンバーを追加', onclick: function () {
+          read();
+          staff.members.push({ id: uid('st'), name: '', role: '' });
+          paint();
+        } })
+      ], function (close) {
+        read();
+        var next = {
+          owner: ownerF.__control.value.trim(),
+          members: staff.members.filter(function (m) { return m.name || m.role; })
+            .map(function (m) { return { id: m.id, name: m.name, role: m.role }; })
+        };
+        store.put(STORE_EVENTS, Object.assign({}, ev, { staff: next, updatedAt: iso(Date.now()) }))
+          .then(function () { close(); toast('運営体制を更新しました。'); router(); });
+      });
+    }
 
     /* F-10 共有リンクの生成
        `file://` は他者からアクセスできないため、文字列を生成するところまでのモックである。
@@ -2865,11 +2982,15 @@ function renderEventDetail(id) {
           statRow('カスタム項目', (ev.formFields || []).length + ' 件')
         ])])
       ]),
+      eventFilesCard,
       el('div', { class: 'card' }, [
-        el('h2', { class: 'section__title', text: '運営体制' }),
+        el('div', { class: 'stack', style: 'justify-content:space-between' }, [
+          el('h2', { class: 'section__title', text: '運営体制' }),
+          el('button', { class: 'btn', text: '編集', onclick: editStaff })
+        ]),
         el('p', { class: 'section__note', text: '参加者には公開されません。' }),
         (!ev.staff || (!ev.staff.owner && (!ev.staff.members || ev.staff.members.length === 0)))
-          ? el('div', { class: 'empty', text: '運営体制は登録されていません。イベントを編集して設定できます。' })
+          ? el('div', { class: 'empty', text: '運営体制は登録されていません。「編集」から設定できます。' })
           : el('table', {}, [el('tbody', {}, [
               el('tr', {}, [el('th', { text: '責任者' }), el('td', { text: ev.staff.owner || '—' })])
             ].concat((ev.staff.members || []).map(function (m) {
@@ -3148,21 +3269,25 @@ function renderEntryList(eventId) {
         el('td', { text: ticketName[en.ticketTypeId] || '—' }),
         el('td', {}, [el('span', { class: 'badge ' + sb[1], text: sb[0] })]),
         el('td', { text: en.checkedInAt ? formatDateTime(en.checkedInAt) : '—' }),
-        el('td', {}, [el('div', { class: 'stack' }, [
-          en.state === 'confirmed'
-            ? el('button', { class: 'btn' + (en.checkedInAt ? '' : ' btn--primary'),
-                text: en.checkedInAt ? '受付取消' : '受付',
-                onclick: function () { toggleCheckIn(en); } })
-            : null,
+        // キャンセル済みでもボタンを消さず無効化する。数が変わると位置がずれるため（Issue #4）
+        el('td', { class: 'cell-actions' }, [el('div', { class: 'stack' }, [
+          el('button', {
+            class: 'btn' + (en.state === 'confirmed' && !en.checkedInAt ? ' btn--primary' : ''),
+            text: en.checkedInAt ? '受付取消' : '受付',
+            disabled: en.state === 'confirmed' ? null : 'disabled',
+            onclick: function () { if (en.state === 'confirmed') toggleCheckIn(en); }
+          }),
           el('button', { class: 'btn', text: '編集', onclick: function () { editEntry(en); } }),
-          en.state === 'confirmed'
-            ? el('button', { class: 'btn', text: 'メール',
-                onclick: function () { sendMessage('個別', [en]); } })
-            : null,
-          en.state === 'confirmed'
-            ? el('button', { class: 'btn btn--danger', text: 'キャンセル',
-                onclick: function () { cancelEntry(en); } })
-            : null
+          el('button', {
+            class: 'btn', text: 'メール',
+            disabled: en.state === 'confirmed' ? null : 'disabled',
+            onclick: function () { if (en.state === 'confirmed') sendMessage('個別', [en]); }
+          }),
+          el('button', {
+            class: 'btn btn--danger', text: 'キャンセル',
+            disabled: en.state === 'confirmed' ? null : 'disabled',
+            onclick: function () { if (en.state === 'confirmed') cancelEntry(en); }
+          })
         ])])
       ]);
     });
@@ -3203,11 +3328,18 @@ function renderEntryList(eventId) {
           ? el('div', { class: 'empty', text: all.length === 0
               ? 'まだ申込がありません。' : '条件に一致する参加者がいません。' })
           : el('div', {}, [
-              el('table', {}, [
+              el('table', { class: 'table--fixed' }, [
+                el('colgroup', {}, [
+                  el('col', { style: 'width:110px' }), el('col', { style: 'width:140px' }),
+                  el('col', {}), el('col', { style: 'width:110px' }),
+                  el('col', { style: 'width:130px' }), el('col', { style: 'width:150px' }),
+                  el('col', { style: 'width:340px' })
+                ]),
                 el('thead', {}, [el('tr', {}, [
                   el('th', { text: '受付コード' }), el('th', { text: '氏名' }),
                   el('th', { text: 'メールアドレス' }), el('th', { text: '券種' }),
-                  el('th', { text: '状態' }), el('th', { text: '受付' }), el('th', { text: '' })
+                  el('th', { text: '状態' }), el('th', { text: '受付' }),
+                  el('th', { class: 'cell-actions', text: '操作' })
                 ])]),
                 el('tbody', {}, body)
               ]),
@@ -3437,22 +3569,16 @@ function settingsGeneral(org) {
     return f;
   }
 
-  var logoF = imageField('組織ロゴ（D-37）',
+  var logoF = imageField('組織ロゴ',
     '公開ページのヘッダーに組織名と並べて表示されます。正方形推奨（256×256）、2MBまで。保存時に長辺256pxへ縮小されます。',
     'logo', 256);
-  var headerF = imageField('ヘッダー画像（D-38）',
+  var headerF = imageField('ヘッダー画像',
     '公開イベント一覧の上部に帯として表示されます。推奨1200×400の横長バナー、2MBまで。未設定なら単色で描画されます。',
     'headerImage', 1200);
 
-  var introF = field(
-    { label: '組織の紹介文（D-39）', help: '公開イベント一覧のヘッダーに、組織名の下へ表示されます。改行のみ反映されます。' },
-    el('textarea', { placeholder: '例: NCT では、社内外に開かれた勉強会を毎月開催しています。', maxlength: '200' })
-  );
-  introF.__control.value = org.intro || '';
-
   return el('div', {}, [
-    el('p', { class: 'muted', text: 'ロゴ・ヘッダー画像・紹介文は F-09（余力枠）です。未設定でも組織名のテキストだけで公開ページは成立します。' }),
-    nameF, logoF, headerF, introF,
+    el('p', { class: 'muted', text: 'ロゴとヘッダー画像は未設定でもかまいません。その場合は組織名のテキストだけで公開ページが成立します。' }),
+    nameF, logoF, headerF,
     el('div', { class: 'formbar' }, [
       el('button', {
         class: 'btn btn--primary', text: '保存',
@@ -3460,8 +3586,7 @@ function settingsGeneral(org) {
           setSetting('org', {
             name: nameF.__control.value.trim(),
             logo: org.logo || null,
-            headerImage: org.headerImage || null,
-            intro: introF.__control.value
+            headerImage: org.headerImage || null
           }).then(refreshOrgCache)
             .then(function () { toast('一般設定を保存しました。'); router(); });
         }
@@ -3805,10 +3930,10 @@ function settingsData() {
 
   return el('div', {}, [
     el('div', { class: 'section' }, [
-      el('h2', { class: 'section__title', text: 'バックアップ（F-20）' }),
+      el('h2', { class: 'section__title', text: 'バックアップ' }),
       el('p', { class: 'section__note', text: 'データは端末内にしか存在せず、ブラウザの閲覧データを削除すると全消失します。JSONの書き出しが唯一のバックアップ手段です。定期的に実行してください。' }),
       el('div', { class: 'field' }, [
-        el('label', { class: 'radio' }, [includeFilesCb, document.createTextNode('資料ファイル（F-34）を含める')]),
+        el('label', { class: 'radio' }, [includeFilesCb, document.createTextNode('資料ファイルを含める')]),
         el('div', { class: 'field__help',
           text: '資料を含めるとJSONが大きくなります（5MB×20件で100MB超）。既定はオフで、資料以外のすべてを書き出します。' })
       ]),
@@ -3834,7 +3959,7 @@ function settingsData() {
       ])
     ]),
     el('div', { class: 'section' }, [
-      el('h2', { class: 'section__title', text: 'デモデータ・初期化（F-21）' }),
+      el('h2', { class: 'section__title', text: 'デモデータ・初期化' }),
       el('p', { class: 'section__note', text: 'デモデータは試験の前提条件を1操作で作るためのものです。投入すると既存データはすべて置き換わります。' }),
       el('div', { class: 'stack' }, [
         el('button', {
@@ -3862,7 +3987,7 @@ function settingsData() {
 /* ------------------------------------------------------------
    公開側の画面（T3 で実装）
    ------------------------------------------------------------ */
-function publicShell(title, children, org, showBanner) {
+function publicShell(title, children, org, showBanner, bleed) {
   org = org || {};
   var name = org.name || 'イベント';
   // F-09 未実装／未設定時の既定挙動（仕様書 5.6）
@@ -3893,13 +4018,17 @@ function publicShell(title, children, org, showBanner) {
       : 'background:var(--color-surface-sub)'
   }) : null;
 
+  // bleed=true のときは children を全幅で置き、幅の制御は各セクションに任せる（Issue #4）
+  var content = bleed
+    ? el('div', { class: 'publicmain' }, (banner ? [banner] : []).concat(children || []))
+    : el('div', { class: 'public' }, [
+        banner,
+        title ? el('div', { class: 'pagehead' }, [el('h1', { class: 'pagehead__title', text: title })]) : null
+      ].filter(Boolean).concat(children || []));
+
   return el('div', { class: 'publicwrap' }, [
     el('header', { class: 'apphead' }, [brand, nav]),
-    el('div', { class: 'public' }, [
-      banner,
-      org.intro ? el('p', { class: 'muted', style: 'white-space:pre-wrap', text: org.intro }) : null,
-      title ? el('div', { class: 'pagehead' }, [el('h1', { class: 'pagehead__title', text: title })]) : null
-    ].filter(Boolean).concat(children || []))
+    content
   ]);
 }
 
@@ -3930,10 +4059,38 @@ function publicEventVisible(event) {
 /* ------------------------------------------------------------
    S-10 公開イベント一覧（F-26）— 参加者側の唯一の入口
    ------------------------------------------------------------ */
-var publicListState = { q: '', category: '', format: '', from: '' };
+var publicListState = { q: '', category: '', format: '', from: '', browse: '' };
 
-/* 参加者トップのキャッチコピー（Issue #3） */
 var PUBLIC_HEADLINE = '新しい知識と出会いが、未来をつくる。';
+
+/* 公開中のイベントのカード（画像の左上にカテゴリを重ねる） */
+function eventCard(ev, opts) {
+  opts = opts || {};
+  var cap = eventCapacity(ev);
+  var finished = isFinished(ev);
+  var media = ev.coverImage
+    ? el('img', { class: 'ecard__img', src: blobUrl(ev.coverImage), alt: '' })
+    : el('div', { class: 'ecard__img ecard__img--empty' },
+        [el('span', { text: (ev.category || 'EVENT').slice(0, 1) })]);
+  return el('a', { class: 'ecard' + (finished ? ' ecard--past' : ''), href: '#/public/' + ev.id }, [
+    el('div', { class: 'ecard__media' }, [
+      media,
+      el('span', { class: 'ecard__cat', text: ev.category || '未分類' }),
+      opts.showStatus && finished
+        ? el('span', { class: 'ecard__state', text: '終了' }) : null
+    ].filter(Boolean)),
+    el('div', { class: 'ecard__body' }, [
+      el('div', { class: 'ecard__title', text: ev.title }),
+      el('div', { class: 'ecard__meta', text: formatDateTime(ev.startAt) }),
+      el('div', { class: 'ecard__meta',
+        text: ev.format === 'online' ? 'オンライン' : (ev.venue || '会場未定') }),
+      el('div', { class: 'ecard__tags' }, [
+        el('span', { class: 'badge badge--neutral', text: ev.category || '未分類' }),
+        cap > 0 ? el('span', { class: 'muted', text: '定員 ' + cap + ' 名' }) : null
+      ].filter(Boolean))
+    ])
+  ]);
+}
 
 function renderPublicList() {
   return Promise.all([storeGetAllRaw(STORE_EVENTS), getSetting('categories'), getSetting('org')])
@@ -3941,16 +4098,7 @@ function renderPublicList() {
       var events = res[0], categories = res[1] || [], org = res[2] || {};
       var s = publicListState;
 
-      var visible = events.filter(publicEventVisible);
-      var open = visible.filter(function (ev) {
-        if (s.q && ev.title.toLowerCase().indexOf(s.q.toLowerCase()) < 0 &&
-            (ev.description || '').toLowerCase().indexOf(s.q.toLowerCase()) < 0) return false;
-        if (s.category && ev.category !== s.category) return false;
-        if (s.format && ev.format !== s.format) return false;
-        if (s.from && new Date(ev.startAt) < new Date(s.from)) return false;
-        return true;
-      });
-      open.sort(function (a, b) { return new Date(a.startAt) - new Date(b.startAt); });
+      var live = events.filter(publicEventVisible);
 
       /* ---- ヒーロー：ヘッダー画像の上にキャッチ、その下に検索 ---- */
       var qInput = searchInput({ placeholder: 'イベント名・キーワード', value: s.q }, s, function (v) {
@@ -3960,13 +4108,13 @@ function renderPublicList() {
         { value: '', label: 'すべての開催形式' },
         { value: 'venue', label: '会場' },
         { value: 'online', label: 'オンライン' }
-      ], s.format, { class: 'input--sm' });
+      ], s.format);
       formatSel.addEventListener('change', function () { s.format = formatSel.value; router(); });
 
       var catSel = selectInput(
         [{ value: '', label: 'すべてのカテゴリ' }].concat(categories.map(function (c) {
           return { value: c, label: c };
-        })), s.category, { class: 'input--sm' });
+        })), s.category);
       catSel.addEventListener('change', function () { s.category = catSel.value; router(); });
 
       var fromInput = el('input', { type: 'date', value: s.from });
@@ -3996,68 +4144,81 @@ function renderPublicList() {
         ])
       ]);
 
-      /* ---- 公開中のイベント：横並びカード。画像左上にカテゴリ ---- */
-      var cards = open.map(function (ev) {
-        var cap = eventCapacity(ev);
-        var media = ev.coverImage
-          ? el('img', { class: 'ecard__img', src: blobUrl(ev.coverImage), alt: '' })
-          : el('div', { class: 'ecard__img ecard__img--empty' },
-              [el('span', { text: (ev.category || 'EVENT').slice(0, 1) })]);
-        return el('a', { class: 'ecard', href: '#/public/' + ev.id }, [
-          el('div', { class: 'ecard__media' }, [
-            media,
-            el('span', { class: 'ecard__cat', text: ev.category || '未分類' })
-          ]),
-          el('div', { class: 'ecard__body' }, [
-            el('div', { class: 'ecard__title', text: ev.title }),
-            el('div', { class: 'ecard__meta', text: formatDateTime(ev.startAt) }),
-            el('div', { class: 'ecard__meta',
-              text: ev.format === 'online' ? 'オンライン' : (ev.venue || '会場未定') }),
-            el('div', { class: 'ecard__tags' }, [
-              el('span', { class: 'badge badge--neutral', text: ev.category || '未分類' }),
-              cap > 0 ? el('span', { class: 'muted', text: '定員 ' + cap + ' 名' }) : null
-            ].filter(Boolean))
-          ])
-        ]);
+      /* ---- 公開中のイベント：検索バーの条件のみで絞る。全件表示 ---- */
+      var shown = live.filter(function (ev) {
+        if (s.q) {
+          var q = s.q.toLowerCase();
+          if (ev.title.toLowerCase().indexOf(q) < 0 &&
+              (ev.description || '').toLowerCase().indexOf(q) < 0) return false;
+        }
+        if (s.category && ev.category !== s.category) return false;
+        if (s.format && ev.format !== s.format) return false;
+        if (s.from && new Date(ev.startAt) < new Date(s.from)) return false;
+        return true;
       });
+      shown.sort(function (a, b) { return new Date(a.startAt) - new Date(b.startAt); });
 
       var listSection = el('section', { class: 'psection' }, [
-        el('div', { class: 'psection__head' }, [
-          el('h2', { class: 'psection__title', text: '公開中のイベント' }),
-          el('span', { class: 'muted', text: open.length + ' 件' })
-        ]),
-        open.length === 0
-          ? el('div', { class: 'card' }, [el('div', { class: 'empty',
-              text: visible.length === 0
-                ? '現在公開中のイベントはありません。'
-                : '条件に一致するイベントがありません。' })])
-          : el('div', { class: 'ecards' }, cards)
+        el('div', { class: 'container' }, [
+          el('div', { class: 'psection__head' }, [
+            el('h2', { class: 'psection__title', text: '公開中のイベント' }),
+            el('span', { class: 'muted', text: shown.length + ' 件' })
+          ]),
+          shown.length === 0
+            ? el('div', { class: 'card' }, [el('div', { class: 'empty',
+                text: live.length === 0
+                  ? '現在公開中のイベントはありません。'
+                  : '条件に一致するイベントがありません。' })])
+            : el('div', { class: 'ecards' }, shown.map(function (ev) { return eventCard(ev); }))
+        ])
       ]);
 
-      /* ---- カテゴリから探す ---- */
-      var catChips = [{ value: '', label: 'すべて' }].concat(categories.map(function (c) {
-        return { value: c, label: c };
-      })).map(function (c) {
-        var count = c.value
-          ? visible.filter(function (ev) { return ev.category === c.value; }).length
-          : visible.length;
+      /* ---- カテゴリから探す：公開中の絞り込みではなく、終了分も含めて別に並べる ---- */
+      var browsable = events.filter(function (ev) { return ev.status === 'published'; });
+      var chips = categories.map(function (c) {
+        var count = browsable.filter(function (ev) { return ev.category === c; }).length;
         return el('button', {
-          class: 'catchip' + (s.category === c.value ? ' is-active' : ''),
-          onclick: function () { s.category = c.value; router(); }
+          class: 'catchip' + (s.browse === c ? ' is-active' : ''),
+          onclick: function () { s.browse = (s.browse === c ? '' : c); router(); }
         }, [
-          el('span', { class: 'catchip__label', text: c.label }),
+          el('span', { class: 'catchip__label', text: c }),
           el('span', { class: 'catchip__count', text: String(count) })
         ]);
       });
 
+      var browsed = s.browse
+        ? browsable.filter(function (ev) { return ev.category === s.browse; })
+        : [];
+      browsed.sort(function (a, b) { return new Date(b.startAt) - new Date(a.startAt); });
+
       var catSection = el('section', { class: 'psection' }, [
-        el('div', { class: 'psection__head' }, [
-          el('h2', { class: 'psection__title', text: 'カテゴリから探す' })
-        ]),
-        el('div', { class: 'catchips' }, catChips)
+        el('div', { class: 'container' }, [
+          el('div', { class: 'psection__head' }, [
+            el('h2', { class: 'psection__title', text: 'カテゴリから探す' }),
+            s.browse
+              ? el('button', { class: 'btn', text: '選択を解除',
+                  onclick: function () { s.browse = ''; router(); } })
+              : el('span', { class: 'muted', text: 'カテゴリを選ぶと、終了したイベントも含めて表示します' })
+          ]),
+          el('div', { class: 'catchips' }, chips),
+          s.browse
+            ? el('div', { style: 'margin-top:var(--space-2xl)' }, [
+                el('div', { class: 'psection__head' }, [
+                  el('h3', { class: 'psection__title', text: s.browse + ' のイベント' }),
+                  el('span', { class: 'muted', text: browsed.length + ' 件（終了分を含む）' })
+                ]),
+                browsed.length === 0
+                  ? el('div', { class: 'card' }, [el('div', { class: 'empty',
+                      text: 'このカテゴリのイベントはまだありません。' })])
+                  : el('div', { class: 'ecards' }, browsed.map(function (ev) {
+                      return eventCard(ev, { showStatus: true });
+                    }))
+              ])
+            : null
+        ].filter(Boolean))
       ]);
 
-      return publicShell(null, [hero, listSection, catSection], org, false);
+      return publicShell(null, [hero, listSection, catSection], org, false, true);
     });
 }
 
@@ -4632,88 +4793,128 @@ function formatBytes(n) {
   return (n / 1024 / 1024).toFixed(1) + ' MB';
 }
 
+var fileListState = { eventId: '' };
+
 function renderFiles() {
-  return storeGetAllRaw(STORE_FILES).then(function (files) {
-    files.sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+  return Promise.all([storeGetAllRaw(STORE_FILES), storeGetAllRaw(STORE_EVENTS)])
+    .then(function (res) {
+      var files = res[0], events = res[1];
+      files.sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+      events.sort(function (a, b) { return new Date(b.startAt) - new Date(a.startAt); });
 
-    var noteF = field({ label: '説明', help: '何の資料かがわかるように書いておくと、あとから探しやすくなります。' },
-      textInput({ placeholder: '例: 第1回の進行台本（最終版）', maxlength: '200' }));
-    var input = el('input', { type: 'file', accept: '.pdf,.png,.jpg,.jpeg,.xlsx,.docx' });
-    var fileF = field({ label: '資料ファイル', required: true,
-      help: 'pdf / png / jpeg / xlsx / docx、1ファイル5MBまで、' + MAX_FILES + '件まで。画像も縮小せず原本のまま保存します。' }, input);
+      var eventName = {};
+      events.forEach(function (ev) { eventName[ev.id] = ev.title; });
+      var st = fileListState;
 
-    function add() {
-      setFieldError(fileF, '');
-      var f = input.files && input.files[0];
-      if (!f) { setFieldError(fileF, MSG.required('資料ファイル')); return; }
-      if (files.length >= MAX_FILES) { setFieldError(fileF, MSG.fileTooMany); return; }   // D-40
-      var ext = fileExtOf(f.name);
-      if (FILE_EXT.indexOf(ext) < 0 && FILE_MIME.indexOf(f.type) < 0) {
-        setFieldError(fileF, MSG.fileFormat); return;
+      var shown = files.filter(function (f) {
+        if (st.eventId === '') return true;
+        if (st.eventId === '__none') return !f.eventId;
+        return f.eventId === st.eventId;
+      });
+
+      var filterSel = selectInput(
+        [{ value: '', label: 'すべての資料' }, { value: '__none', label: '組織共通のみ' }]
+          .concat(events.map(function (ev) { return { value: ev.id, label: ev.title }; })),
+        st.eventId);
+      filterSel.addEventListener('change', function () { st.eventId = filterSel.value; router(); });
+
+      /* 登録フォーム。どのイベントの資料かを必ず選ばせる（Issue #4） */
+      var eventSel = selectInput(
+        [{ value: '', label: '組織共通（特定のイベントに紐付けない）' }].concat(
+          events.map(function (ev) {
+            return { value: ev.id, label: ev.title + '（' + formatDateTime(ev.startAt).split(' ')[0] + '）' };
+          })), '');
+      var eventF = field(
+        { label: 'どのイベントの資料か', required: true,
+          help: 'イベントを選ぶとその資料としてまとめられ、イベント詳細からも開けます。どのイベントにも属さないものは「組織共通」にしてください。' },
+        eventSel);
+      var noteF = field({ label: '説明', help: '何の資料かがわかるように書いておくと、あとから探しやすくなります。' },
+        textInput({ placeholder: '例: 第1回の進行台本（最終版）', maxlength: '200' }));
+      var input = el('input', { type: 'file', accept: '.pdf,.png,.jpg,.jpeg,.xlsx,.docx' });
+      var fileF = field({ label: '資料ファイル', required: true,
+        help: 'pdf / png / jpeg / xlsx / docx、1ファイル5MBまで、' + MAX_FILES + '件まで。画像も縮小せず原本のまま保存します。' }, input);
+
+      function add() {
+        setFieldError(fileF, '');
+        var f = input.files && input.files[0];
+        if (!f) { setFieldError(fileF, MSG.required('資料ファイル')); return; }
+        if (files.length >= MAX_FILES) { setFieldError(fileF, MSG.fileTooMany); return; }
+        var ext = fileExtOf(f.name);
+        if (FILE_EXT.indexOf(ext) < 0 && FILE_MIME.indexOf(f.type) < 0) {
+          setFieldError(fileF, MSG.fileFormat); return;
+        }
+        if (f.size > FILE_MAX_BYTES) { setFieldError(fileF, MSG.fileTooLarge); return; }
+        store.put(STORE_FILES, {
+          id: uid('file'),
+          eventId: eventSel.value || null,
+          name: f.name.slice(0, 100),
+          note: noteF.__control.value.trim(),
+          mime: f.type || '',
+          size: f.size,
+          blob: f,
+          createdAt: iso(Date.now())
+        }).then(function () { toast('資料を登録しました。'); router(); });
       }
-      if (f.size > FILE_MAX_BYTES) { setFieldError(fileF, MSG.fileTooLarge); return; }
-      store.put(STORE_FILES, {
-        id: uid('file'),
-        name: f.name.slice(0, 100),
-        note: noteF.__control.value.trim(),
-        mime: f.type || '',
-        size: f.size,
-        blob: f,                       // リサイズせず原本を保持する
-        createdAt: iso(Date.now())
-      }).then(function () { toast('資料を登録しました。'); router(); });
-    }
 
-    var rows = files.map(function (f) {
-      return el('tr', {}, [
-        el('td', { text: f.name }),
-        el('td', { text: f.note || '—' }),
-        el('td', { text: formatBytes(f.size) }),
-        el('td', { text: formatDateTime(f.createdAt) }),
-        el('td', {}, [el('div', { class: 'stack' }, [
-          el('button', { class: 'btn', text: 'ダウンロード',
-            onclick: function () { downloadFile(f.name, f.blob); } }),
-          el('button', { class: 'btn btn--danger', text: '削除',
-            onclick: function () {
-              if (!confirm('「' + f.name + '」を削除します。よろしいですか？')) return;
-              store.remove(STORE_FILES, f.id).then(function () { toast('資料を削除しました。'); router(); });
-            } })
-        ])])
+      var rows = shown.map(function (f) {
+        return el('tr', {}, [
+          el('td', { text: f.eventId ? (eventName[f.eventId] || '（削除されたイベント）') : '組織共通' }),
+          el('td', { text: f.name }),
+          el('td', { text: f.note || '—' }),
+          el('td', { text: formatBytes(f.size) }),
+          el('td', { text: formatDateTime(f.createdAt) }),
+          el('td', { class: 'cell-actions' }, [el('div', { class: 'stack' }, [
+            el('button', { class: 'btn', text: 'ダウンロード',
+              onclick: function () { downloadFile(f.name, f.blob); } }),
+            el('button', { class: 'btn btn--danger', text: '削除',
+              onclick: function () {
+                if (!confirm('「' + f.name + '」を削除します。よろしいですか？')) return;
+                store.remove(STORE_FILES, f.id).then(function () { toast('資料を削除しました。'); router(); });
+              } })
+          ])])
+        ]);
+      });
+
+      return el('div', {}, [
+        pageHead('資料'),
+        el('div', { class: 'card' }, [
+          el('p', { class: 'muted', text: '進行台本・会場図・配布資料など、イベント運営に使う資料の置き場です。イベントごとにまとめられます。' }),
+          el('div', { class: 'alert', style: 'background:var(--color-warning-bg);color:var(--color-warning-text)' }, [
+            el('div', { text: 'ここに登録した資料は、本番構成では組織のメンバー間で共有されます。' }),
+            el('div', { text: '本課題は file:// 単体で動かすため、この端末のブラウザ内に閉じます。受け渡しにはJSONの書き出し（設定・データ管理）を使ってください。' })
+          ]),
+          el('div', { class: 'toolbar' }, [filterSel]),
+          shown.length === 0
+            ? el('div', { class: 'empty', text: files.length === 0
+                ? '資料はまだ登録されていません。' : '条件に一致する資料がありません。' })
+            : el('table', { class: 'table--fixed' }, [
+                el('colgroup', {}, [
+                  el('col', { style: 'width:220px' }), el('col', {}),
+                  el('col', { style: 'width:240px' }), el('col', { style: 'width:100px' }),
+                  el('col', { style: 'width:170px' }), el('col', { style: 'width:220px' })
+                ]),
+                el('thead', {}, [el('tr', {}, [
+                  el('th', { text: 'イベント' }), el('th', { text: 'ファイル名' }),
+                  el('th', { text: '説明' }), el('th', { text: 'サイズ' }),
+                  el('th', { text: '登録日時' }), el('th', { class: 'cell-actions', text: '操作' })
+                ])]),
+                el('tbody', {}, rows)
+              ]),
+          el('div', { class: 'pager' }, [
+            el('span', { class: 'muted', text: files.length + ' / ' + MAX_FILES + ' 件' })
+          ])
+        ]),
+        el('div', { class: 'card' }, [
+          el('h2', { class: 'section__title', text: '資料を登録' }),
+          eventF, fileF, noteF,
+          el('div', { class: 'formbar' }, [
+            el('button', { class: 'btn btn--primary', text: '登録', onclick: add })
+          ])
+        ])
       ]);
     });
-
-    return el('div', {}, [
-      pageHead('資料'),
-      el('div', { class: 'card' }, [
-        el('p', { class: 'muted', text: '進行台本・会場図・配布資料など、イベント運営に使う資料の置き場です。イベント単位ではなく組織全体で共有します。' }),
-        el('div', { class: 'alert', style: 'background:var(--color-warning-bg);color:var(--color-warning-text)' }, [
-          el('div', { text: 'ここに登録した資料は、本番構成では組織のメンバー間で共有されます。' }),
-          el('div', { text: '本課題は file:// 単体で動かすため、この端末のブラウザ内に閉じます。受け渡しにはJSONの書き出し（設定・データ管理）を使ってください。' })
-        ]),
-        files.length === 0
-          ? el('div', { class: 'empty', text: '資料はまだ登録されていません。' })
-          : el('table', {}, [
-              el('thead', {}, [el('tr', {}, [
-                el('th', { text: 'ファイル名' }), el('th', { text: '説明' }),
-                el('th', { text: 'サイズ' }), el('th', { text: '登録日時' }), el('th', { text: '' })
-              ])]),
-              el('tbody', {}, rows)
-            ]),
-        el('div', { class: 'pager' }, [
-          el('span', { class: 'muted', text: files.length + ' / ' + MAX_FILES + ' 件' })
-        ])
-      ]),
-      el('div', { class: 'card' }, [
-        el('h2', { class: 'section__title', text: '資料を登録' }),
-        fileF, noteF,
-        el('div', { class: 'formbar' }, [
-          el('button', { class: 'btn btn--primary', text: '登録', onclick: add })
-        ])
-      ])
-    ]);
-  });
 }
 
-/* S-14 エラー */
 function renderError(message) {
   return publicShell('ページが見つかりません', [
     el('div', { class: 'card' }, [
