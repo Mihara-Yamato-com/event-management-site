@@ -666,6 +666,26 @@ input[type=datetime-local] { max-width: 260px; }
   z-index: 50;
 }
 
+.ticketbody { display: flex; gap: var(--space-2xl); align-items: flex-start; flex-wrap: wrap; }
+.ticketbody__main { flex: 1 1 320px; min-width: 0; }
+.qrbox { flex: 0 0 auto; text-align: center; }
+.qrbox svg {
+  width: 160px; height: 160px; display: block;
+  border: var(--border); border-radius: var(--radius-sm);
+}
+.qrbox__code {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 3px;
+  margin-top: var(--space-sm);
+}
+.qrbox__note {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  max-width: 180px;
+  margin: var(--space-xs) auto 0;
+}
+
 .thumb {
   max-width: 320px;
   border: var(--border);
@@ -1113,6 +1133,308 @@ function navIcon(key) {
   });
   svg.appendChild(svgEl('path', { d: NAV_ICONS[key] }));
   return svg;
+}
+
+/* ============================================================
+   F-24 受付コードのQRコード生成（バージョン1・レベルL・英数字モード固定）
+   読み取りは対象外（仕様書8章）。表示のみ。
+   技術詳細と検証済みの固定値は QR実装メモ.md を参照
+   ============================================================ */
+
+var QR_SIZE = 21;                  // バージョン1は 21×21
+var QR_DATA_WORDS = 19;            // データ語数
+var QR_EC_WORDS = 7;               // 誤り訂正語数
+var QR_QUIET = 4;                  // 静押域
+
+/* 英数字モードの文字値（メモ 2.1） */
+var QR_ALNUM = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
+
+/* 生成多項式の係数（次数7）— 検証済みの固定値。導出処理は実装しない */
+var QR_GEN_POLY = [1, 127, 122, 154, 164, 11, 68, 117];
+
+/* 形式情報（レベルL・マスク0〜7）— 検証済みの固定値。BCH符号化は実装しない */
+var QR_FORMAT_L = [
+  '111011111000100', '111001011110011', '111110110101010', '111100010011101',
+  '110011000101111', '110001100011000', '110110001000001', '110100101110110'
+];
+
+/* ---------- GF(256)・原始多項式 0x11D ---------- */
+var QR_EXP = new Uint8Array(512);
+var QR_LOG = new Uint8Array(256);
+(function () {
+  var x = 1;
+  for (var i = 0; i < 255; i++) {
+    QR_EXP[i] = x;
+    QR_LOG[x] = i;
+    x <<= 1;
+    if (x & 0x100) x ^= 0x11D;
+  }
+  for (var j = 255; j < 512; j++) QR_EXP[j] = QR_EXP[j - 255];
+})();
+
+function gfMul(a, b) {
+  if (a === 0 || b === 0) return 0;
+  return QR_EXP[QR_LOG[a] + QR_LOG[b]];
+}
+
+/* ---------- 2.1 英数字モードのエンコード ---------- */
+function qrEncodeData(text) {
+  var bits = [];
+  function push(value, length) {
+    for (var i = length - 1; i >= 0; i--) bits.push((value >>> i) & 1);
+  }
+
+  push(0x2, 4);                 // モード指示子 0010
+  push(text.length, 9);         // 文字数指示子（バージョン1〜9の英数字モード）
+
+  for (var i = 0; i < text.length; i += 2) {
+    var v1 = QR_ALNUM.indexOf(text.charAt(i));
+    if (v1 < 0) throw new Error('英数字モードで扱えない文字: ' + text.charAt(i));
+    if (i + 1 < text.length) {
+      var v2 = QR_ALNUM.indexOf(text.charAt(i + 1));
+      if (v2 < 0) throw new Error('英数字モードで扱えない文字: ' + text.charAt(i + 1));
+      push(v1 * 45 + v2, 11);   // 2文字ペアは11ビット
+    } else {
+      push(v1, 6);              // 端数1文字は6ビット
+    }
+  }
+
+  var capacity = QR_DATA_WORDS * 8;
+  for (var t = 0; t < 4 && bits.length < capacity; t++) bits.push(0);   // 終端 0000
+  while (bits.length % 8 !== 0) bits.push(0);                           // バイト境界
+
+  var words = [];
+  for (var b = 0; b < bits.length; b += 8) {
+    var byte = 0;
+    for (var k = 0; k < 8; k++) byte = (byte << 1) | bits[b + k];
+    words.push(byte);
+  }
+  var pads = [0xEC, 0x11];      // 埋め草を交互に
+  for (var p = 0; words.length < QR_DATA_WORDS; p++) words.push(pads[p % 2]);
+  return words;
+}
+
+/* ---------- 2.2 誤り訂正（Reed-Solomon） ---------- */
+function qrErrorCorrection(data) {
+  var res = data.slice();
+  for (var i = 0; i < QR_EC_WORDS; i++) res.push(0);
+  for (var d = 0; d < data.length; d++) {
+    var coef = res[d];
+    if (coef === 0) continue;
+    for (var g = 0; g < QR_GEN_POLY.length; g++) {
+      res[d + g] ^= gfMul(QR_GEN_POLY[g], coef);
+    }
+  }
+  return res.slice(data.length);
+}
+
+/* ---------- 2.4 機能パターンの配置 ---------- */
+function qrNewMatrix() {
+  var m = [];
+  for (var r = 0; r < QR_SIZE; r++) {
+    m.push([]);
+    for (var c = 0; c < QR_SIZE; c++) m[r].push(null);
+  }
+  return m;
+}
+
+function qrPlaceFunctionPatterns(m) {
+  // 位置検出パターン（7×7）と分離パターン
+  [[0, 0], [0, QR_SIZE - 7], [QR_SIZE - 7, 0]].forEach(function (o) {
+    var or = o[0], oc = o[1];
+    for (var r = -1; r <= 7; r++) {
+      for (var c = -1; c <= 7; c++) {
+        var rr = or + r, cc = oc + c;
+        if (rr < 0 || rr >= QR_SIZE || cc < 0 || cc >= QR_SIZE) continue;
+        var inner = (r >= 0 && r <= 6 && (c === 0 || c === 6)) ||
+                    (c >= 0 && c <= 6 && (r === 0 || r === 6)) ||
+                    (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+        m[rr][cc] = inner;
+      }
+    }
+  });
+
+  // タイミングパターン（6行目・6列目）
+  for (var i = 8; i < QR_SIZE - 8; i++) {
+    if (m[6][i] === null) m[6][i] = (i % 2 === 0);
+    if (m[i][6] === null) m[i][6] = (i % 2 === 0);
+  }
+
+  // 固定の黒モジュール
+  m[QR_SIZE - 8][8] = true;
+
+  // 形式情報の領域を予約する（値はマスク確定後に書き込む）
+  for (var k = 0; k < 15; k++) {
+    var pos = qrFormatPositions(k);
+    m[pos[0][0]][pos[0][1]] = false;
+    m[pos[1][0]][pos[1][1]] = false;
+  }
+  return m;
+}
+
+/* 形式情報の書き込み位置。i は 0（LSB）〜14（MSB） */
+function qrFormatPositions(i) {
+  var a, b;
+  if (i < 6) a = [i, 8];
+  else if (i < 8) a = [i + 1, 8];
+  else a = [QR_SIZE - 15 + i, 8];
+
+  if (i < 8) b = [8, QR_SIZE - 1 - i];
+  else if (i === 8) b = [8, 7];
+  else b = [8, 14 - i];
+  return [a, b];
+}
+
+/* ---------- 2.6 マスク ---------- */
+function qrMaskAt(pattern, i, j) {
+  switch (pattern) {
+    case 0: return (i + j) % 2 === 0;
+    case 1: return i % 2 === 0;
+    case 2: return j % 3 === 0;
+    case 3: return (i + j) % 3 === 0;
+    case 4: return (Math.floor(i / 2) + Math.floor(j / 3)) % 2 === 0;
+    case 5: return ((i * j) % 2) + ((i * j) % 3) === 0;
+    case 6: return (((i * j) % 2) + ((i * j) % 3)) % 2 === 0;
+    case 7: return (((i + j) % 2) + ((i * j) % 3)) % 2 === 0;
+  }
+  return false;
+}
+
+/* ---------- 2.5 データ配置（マスクを適用しながら書き込む） ---------- */
+function qrPlaceData(m, words, mask) {
+  var bitIndex = 7, byteIndex = 0, inc = -1, row = QR_SIZE - 1;
+  for (var col = QR_SIZE - 1; col > 0; col -= 2) {
+    if (col === 6) col--;                       // 6列目はタイミングパターンなのでスキップ
+    while (true) {
+      for (var c = 0; c < 2; c++) {
+        var cc = col - c;
+        if (m[row][cc] !== null) continue;
+        var dark = false;
+        if (byteIndex < words.length) dark = ((words[byteIndex] >>> bitIndex) & 1) === 1;
+        if (qrMaskAt(mask, row, cc)) dark = !dark;
+        m[row][cc] = dark;
+        bitIndex--;
+        if (bitIndex === -1) { byteIndex++; bitIndex = 7; }
+      }
+      row += inc;
+      if (row < 0 || row >= QR_SIZE) { row -= inc; inc = -inc; break; }
+    }
+  }
+  return m;
+}
+
+function qrPlaceFormat(m, mask) {
+  var bitsStr = QR_FORMAT_L[mask];
+  var value = parseInt(bitsStr, 2);
+  for (var i = 0; i < 15; i++) {
+    var bit = ((value >>> i) & 1) === 1;
+    var pos = qrFormatPositions(i);
+    m[pos[0][0]][pos[0][1]] = bit;
+    m[pos[1][0]][pos[1][1]] = bit;
+  }
+  m[QR_SIZE - 8][8] = true;      // 固定の黒モジュールは常に黒
+  return m;
+}
+
+/* ---------- 2.6 ペナルティ評価 ---------- */
+function qrPenalty(m) {
+  var score = 0, i, j, run, dark = 0;
+
+  // 規則1: 同色5個以上の連続
+  for (i = 0; i < QR_SIZE; i++) {
+    run = 1;
+    for (j = 1; j < QR_SIZE; j++) {
+      if (m[i][j] === m[i][j - 1]) { run++; } else { if (run >= 5) score += 3 + (run - 5); run = 1; }
+    }
+    if (run >= 5) score += 3 + (run - 5);
+  }
+  for (j = 0; j < QR_SIZE; j++) {
+    run = 1;
+    for (i = 1; i < QR_SIZE; i++) {
+      if (m[i][j] === m[i - 1][j]) { run++; } else { if (run >= 5) score += 3 + (run - 5); run = 1; }
+    }
+    if (run >= 5) score += 3 + (run - 5);
+  }
+
+  // 規則2: 同色の2×2ブロック
+  for (i = 0; i < QR_SIZE - 1; i++) {
+    for (j = 0; j < QR_SIZE - 1; j++) {
+      var v = m[i][j];
+      if (v === m[i][j + 1] && v === m[i + 1][j] && v === m[i + 1][j + 1]) score += 3;
+    }
+  }
+
+  // 規則3: 特定パターン
+  var p1 = [true, false, true, true, true, false, true, false, false, false, false];
+  var p2 = [false, false, false, false, true, false, true, true, true, false, true];
+  function matches(get, start, pat) {
+    for (var k = 0; k < pat.length; k++) if (get(start + k) !== pat[k]) return false;
+    return true;
+  }
+  for (i = 0; i < QR_SIZE; i++) {
+    for (j = 0; j <= QR_SIZE - 11; j++) {
+      var getRow = (function (r) { return function (x) { return m[r][x]; }; })(i);
+      if (matches(getRow, j, p1)) score += 40;
+      if (matches(getRow, j, p2)) score += 40;
+      var getCol = (function (c) { return function (x) { return m[x][c]; }; })(i);
+      if (matches(getCol, j, p1)) score += 40;
+      if (matches(getCol, j, p2)) score += 40;
+    }
+  }
+
+  // 規則4: 黒の比率の偏り
+  for (i = 0; i < QR_SIZE; i++) for (j = 0; j < QR_SIZE; j++) if (m[i][j]) dark++;
+  var ratio = dark * 100 / (QR_SIZE * QR_SIZE);
+  score += Math.floor(Math.abs(ratio - 50) / 5) * 10;
+  return score;
+}
+
+/* ---------- マトリクスの構築（8マスクを試し最小のものを採用） ---------- */
+function qrBuildMatrix(text) {
+  var data = qrEncodeData(text);
+  var words = data.concat(qrErrorCorrection(data));
+  var best = null, bestScore = Infinity, bestMask = -1;
+  for (var mask = 0; mask < 8; mask++) {
+    var m = qrPlaceFunctionPatterns(qrNewMatrix());
+    qrPlaceData(m, words, mask);
+    qrPlaceFormat(m, mask);          // 形式情報も評価対象に含める
+    var score = qrPenalty(m);
+    if (score < bestScore) { bestScore = score; best = m; bestMask = mask; }
+  }
+  return { matrix: best, mask: bestMask, score: bestScore };
+}
+
+/* ---------- 2.7 SVG描画 ---------- */
+function qrSvg(text) {
+  var built = qrBuildMatrix(text);
+  var m = built.matrix;
+  var total = QR_SIZE + QR_QUIET * 2;
+  var svg = svgEl('svg', {
+    viewBox: '0 0 ' + total + ' ' + total,
+    'shape-rendering': 'crispEdges',
+    role: 'img',
+    'aria-label': '受付コード ' + text + ' のQRコード'
+  });
+  svg.appendChild(svgEl('rect', { width: total, height: total, fill: 'var(--color-bg)' }));
+
+  for (var r = 0; r < QR_SIZE; r++) {
+    for (var c = 0; c < QR_SIZE; c++) {
+      if (!m[r][c]) continue;      // 白は描かず背景で表現する
+      svg.appendChild(svgEl('rect', {
+        x: c + QR_QUIET, y: r + QR_QUIET, width: 1, height: 1, fill: 'var(--color-text)'
+      }));
+    }
+  }
+  return svg;
+}
+
+/* 受付コードとQRコードの併記。読み取れない環境の代替としてコード文字列は必ず残す */
+function ticketCodeBlock(code) {
+  return el('div', { class: 'qrbox' }, [
+    qrSvg(code),
+    el('div', { class: 'qrbox__code', text: code }),
+    el('div', { class: 'qrbox__note', text: '当日の受付でこのコードを提示してください' })
+  ]);
 }
 
 /* 画像2 の小さな英字ラベル（FEATURED EVENT 等）に相当する見出し */
@@ -4692,9 +5014,14 @@ function renderApplyDone(eventId) {
     return publicShell('申込が完了しました', [
       el('div', { class: 'card' }, [
         el('p', { text: ev.title + ' へのお申込みを受け付けました。' }),
-        el('div', { class: 'alert', style: 'background:var(--color-success-bg);color:var(--color-success-text)' }, [
-          el('div', { text: '受付コード' }),
-          el('div', { style: 'font-size:var(--font-size-2xl);font-weight:var(--font-weight-bold);letter-spacing:2px', text: code })
+        el('div', { class: 'ticketbody' }, [
+          el('div', { class: 'ticketbody__main' }, [
+            el('div', { class: 'alert', style: 'background:var(--color-success-bg);color:var(--color-success-text)' }, [
+              el('div', { text: '受付コード' }),
+              el('div', { style: 'font-size:var(--font-size-2xl);font-weight:var(--font-weight-bold);letter-spacing:3px', text: code })
+            ])
+          ]),
+          ticketCodeBlock(code)
         ]),
         el('div', { class: 'field__help' }, [
           el('div', { text: '受付コードは次の3つに使います。' }),
@@ -4862,19 +5189,27 @@ function ticketCard(entry, ev, refresh) {
     actions.push(el('a', { class: 'btn', href: '#/public/' + ev.id, text: 'イベントページ' }));
   }
 
+  // キャンセル済みと終了済みではQRを出さない（QR実装メモ 4章フェーズ2）
+  var showQr = entry.state === 'confirmed' && !finished;
+
   return el('div', { class: 'card' }, [
     el('div', { class: 'stack' }, [
       el('h2', { class: 'section__title', text: ev ? ev.title : '（削除されたイベント）' }),
       badge
     ]),
-    el('table', {}, [el('tbody', {}, [
-      statRow('受付コード', entry.code),
-      statRow('券種', ticket ? ticket.name : '—'),
-      ev ? statRow('開催日時', formatDateTime(ev.startAt) + ' 〜 ' + formatDateTime(ev.endAt)) : null,
-      ev ? statRow('場所', ev.format === 'online' ? (ev.onlineUrl || '—') : (ev.venue || '—')) : null,
-      statRow('氏名', entry.name),
-      statRow('受付', entry.checkedInAt ? formatDateTime(entry.checkedInAt) + ' に受付済み' : '未受付')
-    ].filter(Boolean))]),
+    el('div', { class: 'ticketbody' }, [
+      el('div', { class: 'ticketbody__main' }, [
+        el('table', {}, [el('tbody', {}, [
+          statRow('受付コード', entry.code),
+          statRow('券種', ticket ? ticket.name : '—'),
+          ev ? statRow('開催日時', formatDateTime(ev.startAt) + ' 〜 ' + formatDateTime(ev.endAt)) : null,
+          ev ? statRow('場所', ev.format === 'online' ? (ev.onlineUrl || '—') : (ev.venue || '—')) : null,
+          statRow('氏名', entry.name),
+          statRow('受付', entry.checkedInAt ? formatDateTime(entry.checkedInAt) + ' に受付済み' : '未受付')
+        ].filter(Boolean))])
+      ]),
+      showQr ? ticketCodeBlock(entry.code) : null
+    ].filter(Boolean)),
     note ? el('p', { class: 'muted', text: note }) : null,
     actions.length > 0 ? el('div', { class: 'formbar' }, actions) : null
   ].filter(Boolean));
