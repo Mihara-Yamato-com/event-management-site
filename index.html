@@ -1,0 +1,1118 @@
+<meta charset="utf-8">
+<title>イベント主催・管理サービス</title>
+
+<style>
+/* ============================================================
+   デザイントークン — 仕様書.md 9章「デザイントークン」が唯一の正
+   値をここで独自に変えないこと
+   ============================================================ */
+:root {
+  /* 基本 */
+  --color-bg:            #F7F6F3;
+  --color-surface:       #FFFFFF;
+  --color-surface-sub:   #F0EFEB;
+  --color-border:        #E4E2DC;
+  --color-text:          #1A1A18;
+  --color-text-muted:    #8A8880;
+
+  /* アクセント */
+  --color-accent:        #1A1A18;
+  --color-accent-text:   #FFFFFF;
+
+  /* セマンティック */
+  --color-success-bg:    #E4F1E5;  --color-success-text: #2E7D40;
+  --color-warning-bg:    #FBF1DA;  --color-warning-text: #96792A;
+  --color-neutral-bg:    #ECEAE6;  --color-neutral-text: #6B6963;
+  --color-danger-bg:     #FBE6E3;  --color-danger-text:  #B23B2C;
+
+  /* 可視化 */
+  --color-progress:      #4CAF6D;
+  --color-chart-line:    #4A7BC8;
+  --color-chart-grid:    #EDEBE7;
+
+  /* 余白 */
+  --space-xs: 4px;   --space-sm: 8px;   --space-md: 12px;
+  --space-lg: 16px;  --space-xl: 24px;  --space-2xl: 32px; --space-3xl: 48px;
+
+  /* 角丸 */
+  --radius-sm: 4px;  --radius-md: 6px;  --radius-full: 9999px;
+
+  /* タイポグラフィ */
+  --font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --font-size-xs: 12px;  --font-size-sm: 13px;  --font-size-md: 14px;
+  --font-size-lg: 16px;  --font-size-xl: 20px;  --font-size-2xl: 28px;
+  --font-size-display: 40px;
+  --font-weight-normal: 400; --font-weight-medium: 500; --font-weight-bold: 700;
+  --line-height: 1.7;
+
+  /* 境界・影 */
+  --border:    1px solid var(--color-border);
+  --shadow-sm: 0 1px 2px rgba(26,26,24,.06);
+  --shadow-md: 0 4px 12px rgba(26,26,24,.10);
+
+  /* レイアウト */
+  --sidebar-width: 200px;
+  --content-max-width: 1200px;
+  --header-height: 56px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height);
+}
+
+a { color: inherit; }
+
+/* ---------- レイアウト（左サイドバー固定＋右コンテンツ） ---------- */
+.layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: var(--sidebar-width);
+  flex: 0 0 var(--sidebar-width);
+  background: var(--color-surface-sub);
+  border-right: var(--border);
+  padding: var(--space-xl) 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebar__brand {
+  padding: 0 var(--space-lg) var(--space-xl);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.sidebar__nav { display: flex; flex-direction: column; }
+
+.sidebar__link {
+  padding: var(--space-sm) var(--space-lg);
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+.sidebar__link:hover { background: var(--color-border); }
+.sidebar__link--active {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font-weight: var(--font-weight-medium);
+}
+
+.sidebar__foot {
+  position: absolute;
+  bottom: var(--space-xl);
+  left: 0; right: 0;
+  padding: 0 var(--space-lg);
+}
+
+.main {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-xl) var(--space-2xl);
+}
+.main__inner { max-width: var(--content-max-width); }
+
+.pagehead {
+  min-height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+.pagehead__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  margin: 0;
+}
+
+/* ---------- 部品 ---------- */
+.card {
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-lg);
+}
+
+.btn {
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-sm);
+  border: var(--border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.btn:hover { background: var(--color-surface-sub); }
+.btn--primary {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  border-color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
+}
+.btn--primary:hover { opacity: .85; background: var(--color-accent); }
+.btn--danger { color: var(--color-danger-text); border-color: var(--color-danger-text); }
+
+table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
+th, td {
+  text-align: left;
+  padding: var(--space-md);
+  border-bottom: var(--border);
+}
+th { color: var(--color-text-muted); font-weight: var(--font-weight-medium); }
+tbody tr:hover { background: var(--color-surface-sub); }
+
+.badge {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+.badge--success { background: var(--color-success-bg); color: var(--color-success-text); }
+.badge--warning { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.badge--neutral { background: var(--color-neutral-bg); color: var(--color-neutral-text); }
+.badge--danger  { background: var(--color-danger-bg);  color: var(--color-danger-text); }
+
+.muted { color: var(--color-text-muted); }
+.empty {
+  padding: var(--space-3xl);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.stack { display: flex; gap: var(--space-sm); align-items: center; }
+
+.wip {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2xl);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- 公開側（管理画面と別レイアウト） ---------- */
+.public { max-width: 960px; margin: 0 auto; padding: var(--space-2xl) var(--space-xl); }
+.public__head {
+  border-bottom: var(--border);
+  padding-bottom: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.public__brand { font-weight: var(--font-weight-bold); font-size: var(--font-size-lg); }
+
+/* ---------- ログイン ---------- */
+.login { max-width: 360px; margin: 15vh auto; }
+.login input {
+  width: 100%;
+  font-family: inherit;
+  font-size: var(--font-size-md);
+  padding: var(--space-sm) var(--space-md);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-md);
+}
+.login__error { color: var(--color-danger-text); font-size: var(--font-size-sm); }
+</style>
+
+<div id="app"></div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   T1-10 骨組み — ルーティング / ストレージ層 / シードデータ
+   画面の中身は T2-1 以降で実装する
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   定数
+   ------------------------------------------------------------ */
+var DB_NAME = 'event-manager-db';   // 仕様書 6.1（一般名を避ける）
+var DB_VERSION = 1;
+var STORE_EVENTS = 'events';
+var STORE_ENTRIES = 'entries';
+var STORE_SETTINGS = 'settings';
+
+var MAX_CATEGORIES = 20;            // D-12
+var DEFAULT_CATEGORIES = ['セミナー', '勉強会', '研修', '説明会', '懇親会', 'その他'];
+var CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // D-32（O/0/I/1 を除外）
+var CODE_LENGTH = 8;
+
+/* ------------------------------------------------------------
+   ストレージ層（IndexedDB）
+   仕様書 6章 データモデル
+   ------------------------------------------------------------ */
+var dbPromise = null;
+
+function openDb() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise(function (resolve, reject) {
+    var req = indexedDB.open(DB_NAME, DB_VERSION);
+    // ファイルを差し替えても旧データが残るため、スキーマ管理を初期実装から入れる
+    req.onupgradeneeded = function (e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_EVENTS)) {
+        var ev = db.createObjectStore(STORE_EVENTS, { keyPath: 'id' });
+        ev.createIndex('status', 'status', { unique: false });
+        ev.createIndex('startAt', 'startAt', { unique: false });
+        ev.createIndex('seriesId', 'seriesId', { unique: false });
+        ev.createIndex('category', 'category', { unique: false });
+      }
+      if (!db.objectStoreNames.contains(STORE_ENTRIES)) {
+        var en = db.createObjectStore(STORE_ENTRIES, { keyPath: 'id' });
+        en.createIndex('eventId', 'eventId', { unique: false });
+        en.createIndex('email', 'email', { unique: false });
+        en.createIndex('state', 'state', { unique: false });
+        en.createIndex('code', 'code', { unique: false });
+      }
+      if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
+        db.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
+      }
+    };
+    req.onsuccess = function () { resolve(req.result); };
+    req.onerror = function () { reject(req.error); };
+  });
+  return dbPromise;
+}
+
+function tx(storeNames, mode, fn) {
+  return openDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var t = db.transaction(storeNames, mode);
+      var out;
+      t.oncomplete = function () { resolve(out); };
+      t.onerror = function () { reject(t.error); };
+      t.onabort = function () { reject(t.error); };
+      out = fn(t);
+    });
+  });
+}
+
+function reqToPromise(req) {
+  return new Promise(function (resolve, reject) {
+    req.onsuccess = function () { resolve(req.result); };
+    req.onerror = function () { reject(req.error); };
+  });
+}
+
+var store = {
+  get: function (name, key) { return storeOne(name, 'get', key); },
+  put: function (name, value) {
+    return tx(name, 'readwrite', function (t) { t.objectStore(name).put(value); })
+      .then(function () { return value; });
+  },
+  remove: function (name, key) {
+    return tx(name, 'readwrite', function (t) { t.objectStore(name).delete(key); });
+  },
+  clear: function (name) {
+    return tx(name, 'readwrite', function (t) { t.objectStore(name).clear(); });
+  },
+  byIndex: function (name, indexName, value) {
+    return openDb().then(function (db) {
+      return reqToPromise(db.transaction(name, 'readonly').objectStore(name).index(indexName).getAll(value));
+    });
+  }
+};
+
+function storeGetAllRaw(name) {
+  return openDb().then(function (db) {
+    return reqToPromise(db.transaction(name, 'readonly').objectStore(name).getAll());
+  });
+}
+
+function storeOne(name, method, key) {
+  return openDb().then(function (db) {
+    return reqToPromise(db.transaction(name, 'readonly').objectStore(name)[method](key));
+  });
+}
+
+/* settings は key-value（仕様書 6.4） */
+function getSetting(key) {
+  return store.get(STORE_SETTINGS, key).then(function (row) {
+    return row ? row.value : undefined;
+  });
+}
+function setSetting(key, value) {
+  return store.put(STORE_SETTINGS, { key: key, value: value });
+}
+
+/* ------------------------------------------------------------
+   汎用ユーティリティ
+   ------------------------------------------------------------ */
+function uid(prefix) {
+  return prefix + '-' + Date.now().toString(36) + '-' +
+    Math.random().toString(36).slice(2, 8);
+}
+
+/* D-32 受付コード：英大文字＋数字8桁。紛らわしい文字を除外 */
+function generateCode() {
+  var out = '';
+  var buf = new Uint32Array(CODE_LENGTH);
+  crypto.getRandomValues(buf);
+  for (var i = 0; i < CODE_LENGTH; i++) {
+    out += CODE_CHARS.charAt(buf[i] % CODE_CHARS.length);
+  }
+  return out;
+}
+
+function iso(d) { return new Date(d).toISOString(); }
+
+function formatDateTime(isoStr) {
+  if (!isoStr) return '—';
+  var d = new Date(isoStr);
+  var p = function (n) { return String(n).padStart(2, '0'); };
+  return d.getFullYear() + '/' + p(d.getMonth() + 1) + '/' + p(d.getDate()) +
+    ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+/* DOM 生成は textContent を基本とする（CLAUDE.md §8） */
+function el(tag, attrs, children) {
+  var node = document.createElement(tag);
+  if (attrs) {
+    Object.keys(attrs).forEach(function (k) {
+      if (k === 'class') node.className = attrs[k];
+      else if (k === 'text') node.textContent = attrs[k];
+      else if (k.indexOf('on') === 0) node.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] !== null && attrs[k] !== undefined) node.setAttribute(k, attrs[k]);
+    });
+  }
+  (children || []).forEach(function (c) {
+    if (c === null || c === undefined) return;
+    node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  });
+  return node;
+}
+
+/* ------------------------------------------------------------
+   導出値（仕様書 6.5）— 保持せず都度計算する
+   ------------------------------------------------------------ */
+function isFinished(event) {                       // F-03 / S-10
+  return new Date(event.endAt).getTime() < Date.now();
+}
+
+function eventStatusLabel(event) {
+  if (isFinished(event)) return { text: '終了', cls: 'badge--neutral' };
+  if (event.status === 'published') return { text: '公開中', cls: 'badge--success' };
+  return { text: '公開前', cls: 'badge--warning' };
+}
+
+function confirmedCount(entries, eventId, ticketTypeId) {
+  return entries.filter(function (e) {
+    return e.eventId === eventId && e.state === 'confirmed' &&
+      (!ticketTypeId || e.ticketTypeId === ticketTypeId);
+  }).length;
+}
+
+function eventCapacity(event) {
+  return (event.ticketTypes || []).reduce(function (sum, t) { return sum + t.capacity; }, 0);
+}
+
+/* ------------------------------------------------------------
+   初期化 — settings の既定値（仕様書 6.4）
+   ------------------------------------------------------------ */
+function ensureSettings() {
+  var defaults = {
+    org: { name: 'NCT', logo: null, headerImage: null, intro: '' },   // F-09
+    categories: DEFAULT_CATEGORIES.slice(),                            // D-12
+    defaultFormFields: [],                                             // F-07
+    mailTemplates: { invite: '', reminder: '', announce: '' },         // F-19 / F-29
+    sendLog: [],                                                       // F-19
+    passcode: null,                                                    // F-27（初回起動時に設定）
+    uiState: { lastTab: null },                                        // localStorage を使わないための代替
+    schemaVersion: DB_VERSION
+  };
+  var keys = Object.keys(defaults);
+  return Promise.all(keys.map(function (k) {
+    return getSetting(k).then(function (v) {
+      if (v === undefined) return setSetting(k, defaults[k]);
+      return null;
+    });
+  }));
+}
+
+/* ------------------------------------------------------------
+   F-21 デモデータ投入 / 全データ初期化
+   内容は 仕様決定シート.md F節に従う
+   ------------------------------------------------------------ */
+function resetAllData() {
+  return Promise.all([
+    store.clear(STORE_EVENTS),
+    store.clear(STORE_ENTRIES),
+    store.clear(STORE_SETTINGS)
+  ]).then(ensureSettings).then(function () {
+    session.authenticated = false;
+    return null;
+  });
+}
+
+function makeTicketType(name, capacity, opts) {
+  opts = opts || {};
+  return {
+    id: uid('tt'),
+    name: name,
+    capacity: capacity,
+    description: opts.description || '',
+    salesStart: opts.salesStart || null,
+    salesEnd: opts.salesEnd || null,
+    lowStockThreshold: opts.lowStockThreshold === undefined ? 10 : opts.lowStockThreshold // D-25
+  };
+}
+
+function seedDemoData() {
+  var DAY = 86400000;
+  var now = Date.now();
+  var seriesId = uid('series');
+
+  // 満席イベント：2券種（一方のみ満席）
+  var ttFullA = makeTicketType('一般', 5);
+  var ttFullB = makeTicketType('学生', 10);
+  var eventFull = {
+    id: uid('ev'),
+    title: 'Git 基礎ハンズオン（第1回）',
+    description: '新卒メンバー向けに、業務で使う Git の基本操作を90分で学びます。',
+    format: 'venue',
+    venue: '本社 3F セミナールーム',
+    onlineUrl: '',
+    category: '勉強会',
+    startAt: iso(now + 7 * DAY),
+    endAt: iso(now + 7 * DAY + 5400000),
+    deadline: iso(now + 6 * DAY),
+    status: 'published',
+    seriesId: seriesId,
+    ticketTypes: [ttFullA, ttFullB],
+    formFields: [                                    // F-07（text / select / checkbox 各1）
+      { id: uid('ff'), label: '所属部署', type: 'text', options: [], required: true, order: 1 },
+      { id: uid('ff'), label: '経験年数', type: 'select', options: ['1年未満', '1〜3年', '3年以上'], required: true, order: 2 },
+      { id: uid('ff'), label: '懇親会に参加する', type: 'checkbox', options: [], required: false, order: 3 }
+    ],
+    coverImage: null,                                // シート F節：カバー画像なし（空状態の確認を兼ねる）
+    attachments: [],
+    createdAt: iso(now - 10 * DAY),
+    updatedAt: iso(now - 10 * DAY)
+  };
+
+  // 空きありイベント：1券種
+  var ttOpen = makeTicketType('一般', 30);
+  var eventOpen = {
+    id: uid('ev'),
+    title: 'オンライン説明会 2026年8月',
+    description: '当社の事業内容と働き方についてオンラインでご説明します。',
+    format: 'online',
+    venue: '',
+    onlineUrl: 'https://example.com/webinar',
+    category: '説明会',
+    startAt: iso(now + 14 * DAY),
+    endAt: iso(now + 14 * DAY + 3600000),
+    deadline: iso(now + 13 * DAY),
+    status: 'published',
+    seriesId: null,
+    ticketTypes: [ttOpen],
+    formFields: [],
+    coverImage: null,
+    attachments: [],
+    createdAt: iso(now - 5 * DAY),
+    updatedAt: iso(now - 5 * DAY)
+  };
+
+  // 下書きイベント：1券種
+  var ttDraft = makeTicketType('一般', 20);
+  var eventDraft = {
+    id: uid('ev'),
+    title: 'Git 基礎ハンズオン（第2回）',
+    description: '第1回の続編。ブランチ運用とレビューの流れを扱います。',
+    format: 'venue',
+    venue: '本社 3F セミナールーム',
+    onlineUrl: '',
+    category: '勉強会',
+    startAt: iso(now + 28 * DAY),
+    endAt: iso(now + 28 * DAY + 5400000),
+    deadline: iso(now + 27 * DAY),
+    status: 'draft',
+    seriesId: seriesId,
+    ticketTypes: [ttDraft],
+    formFields: [],
+    coverImage: null,
+    attachments: [],
+    createdAt: iso(now - 2 * DAY),
+    updatedAt: iso(now - 2 * DAY)
+  };
+
+  var events = [eventFull, eventOpen, eventDraft];
+
+  // 参加者 計20件：confirmed 18 / cancelled 2、うち5件チェックイン済み
+  // （waitlist は F-14 廃止により存在しない）
+  var names = ['佐藤 健', '鈴木 彩', '高橋 涼', '田中 望', '伊藤 蓮',
+               '渡辺 陽', '山本 岬', '中村 翼', '小林 悠', '加藤 楓',
+               '吉田 樹', '山田 凛', '佐々木 湊', '山口 咲', '松本 昴',
+               '井上 葵', '木村 奏', '林 拓', '清水 結', '斎藤 律'];
+  var entries = [];
+  var plan = [
+    // [イベント, 券種, 件数, state]
+    [eventFull, ttFullA, 5, 'confirmed'],   // 券種A は満席（定員5）
+    [eventFull, ttFullB, 4, 'confirmed'],   // 券種B は空きあり
+    [eventOpen, ttOpen, 9, 'confirmed'],
+    [eventOpen, ttOpen, 2, 'cancelled']
+  ];
+  var idx = 0;
+  plan.forEach(function (row) {
+    for (var i = 0; i < row[2]; i++) {
+      var name = names[idx % names.length];
+      var checkedIn = row[3] === 'confirmed' && idx < 5;   // 先頭5件をチェックイン済みに
+      entries.push({
+        id: uid('en'),
+        eventId: row[0].id,
+        ticketTypeId: row[1].id,
+        code: generateCode(),
+        name: name,
+        email: 'demo' + (idx + 1) + '@example.com',
+        answers: {},
+        state: row[3],
+        checkedInAt: checkedIn ? iso(now - 1 * DAY) : null,
+        cancelledAt: row[3] === 'cancelled' ? iso(now - 1 * DAY) : null,
+        createdAt: iso(now - (20 - idx) * 3600000),
+        updatedAt: iso(now - (20 - idx) * 3600000)
+      });
+      idx++;
+    }
+  });
+
+  return resetAllData()
+    .then(function () {
+      return Promise.all(events.map(function (e) { return store.put(STORE_EVENTS, e); }));
+    })
+    .then(function () {
+      return Promise.all(entries.map(function (e) { return store.put(STORE_ENTRIES, e); }));
+    })
+    .then(function () { return { events: events.length, entries: entries.length }; });
+}
+
+/* ------------------------------------------------------------
+   セッション（F-27）
+   ログイン状態はメモリ上のみ。ページ再読込で解除される
+   ------------------------------------------------------------ */
+var session = { authenticated: false };
+
+/* ------------------------------------------------------------
+   ルーター — location.hash（History API は file:// で不安定なため使わない）
+   画面IDと認証要否は 仕様書 5.1 / 5.2 に対応する
+   ------------------------------------------------------------ */
+var routes = [
+  { screen: 'S-01', auth: true,  pattern: /^\/$/,                              render: renderDashboard },
+  { screen: 'S-02', auth: true,  pattern: /^\/events$/,                        render: renderEventList },
+  { screen: 'S-03', auth: true,  pattern: /^\/events\/new$/,                   render: renderEventEdit },
+  { screen: 'S-03', auth: true,  pattern: /^\/events\/([^/]+)\/edit$/,         render: renderEventEdit },
+  { screen: 'S-04', auth: true,  pattern: /^\/events\/([^/]+)$/,               render: renderEventDetail },
+  { screen: 'S-08', auth: true,  pattern: /^\/events\/([^/]+)\/entries$/,      render: renderEntryList },
+  { screen: 'S-15', auth: true,  pattern: /^\/tickets$/,                       render: renderMyTickets },
+  { screen: 'S-09', auth: true,  pattern: /^\/settings$/,                      render: renderSettings },
+  { screen: 'S-12', auth: null,  pattern: /^\/login$/,                         render: renderLogin },
+  { screen: 'S-10', auth: false, pattern: /^\/public$/,                        render: renderPublicList },
+  { screen: 'S-05', auth: false, pattern: /^\/public\/([^/]+)$/,               render: renderPublicEvent },
+  { screen: 'S-06', auth: false, pattern: /^\/public\/([^/]+)\/apply$/,        render: renderApplyForm },
+  { screen: 'S-13', auth: false, pattern: /^\/public\/([^/]+)\/confirm$/,      render: renderApplyConfirm },
+  { screen: 'S-07', auth: false, pattern: /^\/public\/([^/]+)\/done$/,         render: renderApplyDone },
+  { screen: 'S-11', auth: false, pattern: /^\/lookup$/,                        render: renderLookup },
+  { screen: 'S-14', auth: false, pattern: /^\/error$/,                         render: renderError }
+];
+
+function currentPath() {
+  var h = location.hash.replace(/^#/, '');
+  return h === '' ? '/' : h;
+}
+
+function navigate(path) { location.hash = path; }
+
+function resolve(path) {
+  for (var i = 0; i < routes.length; i++) {
+    var m = routes[i].pattern.exec(path);
+    if (m) return { route: routes[i], params: m.slice(1) };
+  }
+  return null;
+}
+
+var appEl = null;
+
+function router() {
+  var path = currentPath();
+  var hit = resolve(path);
+
+  if (!hit) { renderShell('S-14', renderError()); return; }
+
+  // 認証ガード（仕様書 5.2）— 未認証で「要」の画面は S-12 へ
+  if (hit.route.auth === true && !session.authenticated) {
+    navigate('/login');
+    return;
+  }
+
+  var out = hit.route.render.apply(null, hit.params);
+  Promise.resolve(out).then(function (node) {
+    renderShell(hit.route.screen, node);
+  }).catch(function (err) {
+    console.error(err);
+    renderShell('S-14', renderError(String(err && err.message || err)));
+  });
+}
+
+/* ------------------------------------------------------------
+   シェル描画 — 管理側は2カラム、公開側は別レイアウト
+   ------------------------------------------------------------ */
+var ADMIN_NAV = [
+  { path: '/',         label: 'ダッシュボード' },
+  { path: '/events',   label: 'イベント' },
+  { path: '/tickets',  label: 'マイチケット' },
+  { path: '/settings', label: '設定・データ管理' }
+];
+
+function renderShell(screenId, contentNode) {
+  appEl.textContent = '';
+  var isAdmin = session.authenticated && screenId !== 'S-12' &&
+    ['S-01', 'S-02', 'S-03', 'S-04', 'S-08', 'S-09', 'S-15'].indexOf(screenId) >= 0;
+
+  if (!isAdmin) {
+    appEl.appendChild(contentNode);
+    return;
+  }
+
+  var path = currentPath();
+  var nav = el('nav', { class: 'sidebar__nav' }, ADMIN_NAV.map(function (item) {
+    var active = item.path === '/' ? path === '/' : path.indexOf(item.path) === 0;
+    return el('a', {
+      class: 'sidebar__link' + (active ? ' sidebar__link--active' : ''),
+      href: '#' + item.path,
+      text: item.label
+    });
+  }));
+
+  var sidebar = el('aside', { class: 'sidebar' }, [
+    el('div', { class: 'sidebar__brand', text: 'イベント管理' }),
+    nav,
+    el('div', { class: 'sidebar__foot' }, [
+      el('a', { class: 'sidebar__link', href: '#/public', text: '公開ページを見る' }),
+      el('a', {
+        class: 'sidebar__link', href: '#/login', text: 'ログアウト',
+        onclick: function () { session.authenticated = false; }
+      })
+    ])
+  ]);
+
+  appEl.appendChild(el('div', { class: 'layout' }, [
+    sidebar,
+    el('main', { class: 'main' }, [el('div', { class: 'main__inner' }, [contentNode])])
+  ]));
+}
+
+function pageHead(title, actions) {
+  return el('div', { class: 'pagehead' }, [
+    el('h1', { class: 'pagehead__title', text: title }),
+    el('div', { class: 'stack' }, actions || [])
+  ]);
+}
+
+/* T2 以降で中身を実装する画面のプレースホルダ */
+function wip(taskId, note) {
+  return el('div', { class: 'wip' }, [
+    el('div', { text: taskId + ' で実装する' }),
+    note ? el('div', { class: 'muted', text: note }) : null
+  ]);
+}
+
+/* ------------------------------------------------------------
+   画面 — S-12 主催者ログイン（F-27）
+   初回起動時はパスコードの初期設定を兼ねる
+   ------------------------------------------------------------ */
+function renderLogin() {
+  return getSetting('passcode').then(function (passcode) {
+    var isFirstRun = !passcode;
+    var input = el('input', {
+      type: 'password',
+      placeholder: isFirstRun ? '4〜16文字の英数字' : 'パスコード',
+      autofocus: 'autofocus'
+    });
+    var error = el('div', { class: 'login__error' });
+
+    function submit() {
+      var value = input.value.trim();
+      error.textContent = '';
+      if (isFirstRun) {
+        if (!/^[A-Za-z0-9]{4,16}$/.test(value)) {   // D-33
+          error.textContent = 'パスコードは4〜16文字の英数字で入力してください';
+          return;
+        }
+        setSetting('passcode', value).then(function () {
+          session.authenticated = true;
+          navigate('/');
+        });
+      } else {
+        if (value !== passcode) {
+          error.textContent = 'パスコードが正しくありません';
+          return;
+        }
+        session.authenticated = true;
+        navigate('/');
+      }
+    }
+
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+
+    return el('div', { class: 'login' }, [
+      el('div', { class: 'card' }, [
+        el('h1', { class: 'pagehead__title', text: isFirstRun ? 'パスコードの初期設定' : 'ログイン' }),
+        el('p', { class: 'muted', text: isFirstRun
+          ? '初回起動です。管理画面に入るためのパスコードを設定してください。'
+          : '管理画面に入るにはパスコードを入力してください。' }),
+        input,
+        error,
+        el('button', { class: 'btn btn--primary', text: isFirstRun ? '設定して開始' : 'ログイン', onclick: submit })
+      ]),
+      el('div', { class: 'stack' }, [
+        el('a', { class: 'muted', href: '#/public', text: '公開イベント一覧へ' })
+      ])
+    ]);
+  });
+}
+
+/* ------------------------------------------------------------
+   画面 — S-01 ダッシュボード（F-18）
+   ------------------------------------------------------------ */
+function renderDashboard() {
+  return Promise.all([storeGetAllRaw(STORE_EVENTS), storeGetAllRaw(STORE_ENTRIES)])
+    .then(function (res) {
+      var events = res[0], entries = res[1];
+      var live = events.filter(function (e) { return e.status === 'published' && !isFinished(e); });
+      var confirmed = entries.filter(function (e) { return e.state === 'confirmed'; });
+      return el('div', {}, [
+        pageHead('ダッシュボード'),
+        el('div', { class: 'card' }, [
+          el('table', {}, [
+            el('tbody', {}, [
+              statRow('公開中のイベント', live.length + ' 件'),
+              statRow('イベント総数', events.length + ' 件'),
+              statRow('申込（参加確定）', confirmed.length + ' 件'),
+              statRow('チェックイン済み', confirmed.filter(function (e) { return e.checkedInAt; }).length + ' 件')
+            ])
+          ])
+        ]),
+        wip('T3-3', '定員充足率・チェックイン率・申込推移の集計を実装する')
+      ]);
+    });
+}
+
+function statRow(label, value) {
+  return el('tr', {}, [el('th', { text: label }), el('td', { text: value })]);
+}
+
+/* ------------------------------------------------------------
+   画面 — S-02 イベント一覧（F-04）
+   ------------------------------------------------------------ */
+function renderEventList() {
+  return Promise.all([storeGetAllRaw(STORE_EVENTS), storeGetAllRaw(STORE_ENTRIES)])
+    .then(function (res) {
+      var events = res[0], entries = res[1];
+      // D-36 既定の並び順：開始日時の降順
+      events.sort(function (a, b) { return new Date(b.startAt) - new Date(a.startAt); });
+
+      var body = events.map(function (ev) {
+        var st = eventStatusLabel(ev);
+        return el('tr', {}, [
+          el('td', {}, [el('a', { href: '#/events/' + ev.id, text: ev.title })]),
+          el('td', {}, [el('span', { class: 'badge ' + st.cls, text: st.text })]),
+          el('td', { text: ev.category }),
+          el('td', { text: formatDateTime(ev.startAt) }),
+          el('td', { text: confirmedCount(entries, ev.id) + ' / ' + eventCapacity(ev) })
+        ]);
+      });
+
+      return el('div', {}, [
+        pageHead('イベント', [
+          el('a', { class: 'btn btn--primary', href: '#/events/new', text: 'イベントを作成' })
+        ]),
+        el('div', { class: 'card' }, [
+          events.length === 0
+            ? el('div', { class: 'empty', text: 'イベントがまだありません。「イベントを作成」から追加してください。' })
+            : el('table', {}, [
+                el('thead', {}, [el('tr', {}, [
+                  el('th', { text: 'イベント名' }), el('th', { text: '状態' }),
+                  el('th', { text: 'カテゴリ' }), el('th', { text: '開催日時' }),
+                  el('th', { text: '申込 / 定員' })
+                ])]),
+                el('tbody', {}, body)
+              ])
+        ]),
+        wip('T2-2', '検索・絞り込み・ページング・複製を実装する')
+      ]);
+    });
+}
+
+/* ------------------------------------------------------------
+   画面 — S-03 / S-04 / S-08 / S-15 / S-09（T2 以降で実装）
+   ------------------------------------------------------------ */
+function renderEventEdit(id) {
+  return el('div', {}, [
+    pageHead(id ? 'イベントを編集' : 'イベントを作成', [
+      el('a', { class: 'btn', href: '#/events', text: '一覧へ戻る' })
+    ]),
+    wip('T2-2 / T2-3 / T2-4', '基本情報・券種設定・フォーム項目定義を実装する（D-11〜D-29）')
+  ]);
+}
+
+function renderEventDetail(id) {
+  return store.get(STORE_EVENTS, id).then(function (ev) {
+    if (!ev) return renderError('指定されたイベントが見つかりません');
+    var st = eventStatusLabel(ev);
+    return el('div', {}, [
+      pageHead(ev.title, [
+        el('a', { class: 'btn', href: '#/public/' + ev.id, text: 'プレビュー' }),
+        el('a', { class: 'btn', href: '#/events/' + ev.id + '/entries', text: '参加者一覧' }),
+        el('a', { class: 'btn btn--primary', href: '#/events/' + ev.id + '/edit', text: '編集' })
+      ]),
+      el('div', { class: 'card' }, [
+        el('table', {}, [el('tbody', {}, [
+          el('tr', {}, [el('th', { text: '状態' }),
+            el('td', {}, [el('span', { class: 'badge ' + st.cls, text: st.text })])]),
+          statRow('カテゴリ', ev.category),
+          statRow('開催形式', ev.format === 'online' ? 'オンライン' : '会場'),
+          statRow('会場 / 視聴URL', ev.format === 'online' ? ev.onlineUrl : ev.venue),
+          statRow('開催日時', formatDateTime(ev.startAt) + ' 〜 ' + formatDateTime(ev.endAt)),
+          statRow('申込締切', formatDateTime(ev.deadline)),
+          statRow('券種', (ev.ticketTypes || []).map(function (t) {
+            return t.name + '（定員' + t.capacity + '）';
+          }).join(' / ') || '—')
+        ])])
+      ]),
+      wip('T2-2 / T4-1', '告知文の生成（F-29）・運用ファイル管理タブ（F-34・余力）を実装する')
+    ]);
+  });
+}
+
+function renderEntryList(eventId) {
+  return Promise.all([store.get(STORE_EVENTS, eventId), store.byIndex(STORE_ENTRIES, 'eventId', eventId)])
+    .then(function (res) {
+      var ev = res[0], entries = res[1];
+      if (!ev) return renderError('指定されたイベントが見つかりません');
+      // D-36 既定の並び順：申込日時の昇順
+      entries.sort(function (a, b) { return new Date(a.createdAt) - new Date(b.createdAt); });
+
+      var stateBadge = { confirmed: ['参加確定', 'badge--success'], cancelled: ['キャンセル済み', 'badge--danger'] };
+      var body = entries.map(function (en) {
+        var s = stateBadge[en.state] || ['—', 'badge--neutral'];
+        return el('tr', {}, [
+          el('td', { text: en.code }),
+          el('td', { text: en.name }),
+          el('td', { text: en.email }),
+          el('td', {}, [el('span', { class: 'badge ' + s[1], text: s[0] })]),
+          el('td', { text: en.checkedInAt ? formatDateTime(en.checkedInAt) : '—' })
+        ]);
+      });
+
+      return el('div', {}, [
+        pageHead(ev.title + ' — 参加者', [
+          el('a', { class: 'btn', href: '#/events/' + ev.id, text: 'イベント詳細へ' })
+        ]),
+        el('div', { class: 'card' }, [
+          entries.length === 0
+            ? el('div', { class: 'empty', text: 'まだ申込がありません。' })
+            : el('table', {}, [
+                el('thead', {}, [el('tr', {}, [
+                  el('th', { text: '受付コード' }), el('th', { text: '氏名' }),
+                  el('th', { text: 'メールアドレス' }), el('th', { text: '状態' }),
+                  el('th', { text: 'チェックイン' })
+                ])]),
+                el('tbody', {}, body)
+              ])
+        ]),
+        wip('T3-3 / T3-4', '検索・ページング・チェックイン・CSV出力・メッセージ送信を実装する')
+      ]);
+    });
+}
+
+function renderMyTickets() {
+  return Promise.all([storeGetAllRaw(STORE_EVENTS), storeGetAllRaw(STORE_ENTRIES)])
+    .then(function (res) {
+      var events = res[0], entries = res[1];
+      var rows = [];
+      events.forEach(function (ev) {
+        (ev.ticketTypes || []).forEach(function (t) {
+          var sold = confirmedCount(entries, ev.id, t.id);
+          rows.push(el('tr', {}, [
+            el('td', {}, [el('a', { href: '#/events/' + ev.id, text: ev.title })]),
+            el('td', { text: t.name }),
+            el('td', { text: String(sold) }),
+            el('td', { text: String(t.capacity) }),
+            el('td', { text: String(Math.max(0, t.capacity - sold)) })
+          ]));
+        });
+      });
+      return el('div', {}, [
+        pageHead('マイチケット'),
+        el('div', { class: 'card' }, [
+          rows.length === 0
+            ? el('div', { class: 'empty', text: '券種がまだありません。' })
+            : el('table', {}, [
+                el('thead', {}, [el('tr', {}, [
+                  el('th', { text: 'イベント' }), el('th', { text: '券種' }),
+                  el('th', { text: '申込' }), el('th', { text: '定員' }), el('th', { text: '残席' })
+                ])]),
+                el('tbody', {}, rows)
+              ])
+        ])
+      ]);
+    });
+}
+
+/* S-09 設定・データ管理 — T2-6 で本実装。F-21 のみ先に動かす */
+function renderSettings() {
+  var status = el('div', { class: 'muted' });
+
+  function withBusy(label, fn) {
+    status.textContent = label;
+    return fn().then(function (r) {
+      status.textContent = '完了しました。';
+      router();
+      return r;
+    }).catch(function (e) {
+      status.textContent = 'エラー: ' + (e && e.message || e);
+    });
+  }
+
+  return el('div', {}, [
+    pageHead('設定・データ管理'),
+    el('div', { class: 'card' }, [
+      el('h2', { class: 'pagehead__title', text: 'データ管理（F-21）' }),
+      el('p', { class: 'muted', text: 'デモデータは試験の前提条件を1操作で作るためのものです。投入すると既存データはすべて置き換わります。' }),
+      el('div', { class: 'stack' }, [
+        el('button', {
+          class: 'btn btn--primary', text: 'デモデータを投入',
+          onclick: function () {
+            if (!confirm('既存のデータをすべて削除してデモデータを投入します。よろしいですか？')) return;
+            withBusy('投入中…', seedDemoData);
+          }
+        }),
+        el('button', {
+          class: 'btn btn--danger', text: '全データを初期化',
+          onclick: function () {
+            if (!confirm('すべてのデータを削除します。元に戻せません。よろしいですか？')) return;
+            withBusy('初期化中…', function () {
+              return resetAllData().then(function () { navigate('/login'); });
+            });
+          }
+        }),
+        status
+      ])
+    ]),
+    wip('T2-6 / T4-1', '一般設定・カテゴリ管理・フォーム既定値・メールテンプレート・送信履歴・パスコード変更・JSON入出力を実装する')
+  ]);
+}
+
+/* ------------------------------------------------------------
+   公開側の画面（T3 で実装）
+   ------------------------------------------------------------ */
+function publicShell(title, children) {
+  return el('div', { class: 'public' }, [
+    el('div', { class: 'public__head' }, [
+      el('a', { class: 'public__brand', href: '#/public', text: 'NCT イベント' }),
+      el('a', { class: 'muted', href: '#/lookup', text: '申込を確認する' })
+    ]),
+    el('h1', { class: 'pagehead__title', text: title })
+  ].concat(children || []));
+}
+
+function renderPublicList() {
+  return storeGetAllRaw(STORE_EVENTS).then(function (events) {
+    // 公開中かつ終了していないもののみ（F-03 / F-26）
+    var open = events.filter(function (e) { return e.status === 'published' && !isFinished(e); });
+    open.sort(function (a, b) { return new Date(a.startAt) - new Date(b.startAt); });
+
+    var cards = open.map(function (ev) {
+      return el('div', { class: 'card' }, [
+        el('div', {}, [el('a', { href: '#/public/' + ev.id, text: ev.title })]),
+        el('div', { class: 'muted', text: formatDateTime(ev.startAt) + '　' + ev.category })
+      ]);
+    });
+
+    return publicShell('開催予定のイベント',
+      open.length === 0
+        ? [el('div', { class: 'card' }, [el('div', { class: 'empty', text: '現在公開中のイベントはありません。' })])]
+        : cards);
+  });
+}
+
+function renderPublicEvent(eventId) {
+  return store.get(STORE_EVENTS, eventId).then(function (ev) {
+    if (!ev) return renderError('指定されたイベントが見つかりません');
+    // D-08 下書きへの直接アクセスは S-14 へ（プレビューは管理側から）
+    if (ev.status === 'draft' && !session.authenticated) {
+      return renderError('このイベントは公開されていません');
+    }
+    return publicShell(ev.title, [
+      el('div', { class: 'card' }, [
+        el('p', { text: ev.description }),
+        el('table', {}, [el('tbody', {}, [
+          statRow('開催日時', formatDateTime(ev.startAt) + ' 〜 ' + formatDateTime(ev.endAt)),
+          statRow('開催形式', ev.format === 'online' ? 'オンライン' : '会場'),
+          statRow('場所', ev.format === 'online' ? ev.onlineUrl : ev.venue),
+          statRow('申込締切', formatDateTime(ev.deadline))
+        ])]),
+        el('div', { class: 'stack' }, [
+          el('a', { class: 'btn btn--primary', href: '#/public/' + ev.id + '/apply', text: '申し込む' })
+        ])
+      ]),
+      wip('T3-1 / T3-2', '券種表示・残席表示（F-31）・満席／締切の制御を実装する')
+    ]);
+  });
+}
+
+function renderApplyForm(eventId) {
+  return publicShell('申込フォーム', [wip('T3-2', '券種選択・参加者情報入力（D-30 / D-31）を実装する')]);
+}
+function renderApplyConfirm(eventId) {
+  return publicShell('申込内容の確認', [wip('T3-2', '入力内容の確認と確定処理を実装する')]);
+}
+function renderApplyDone(eventId) {
+  return publicShell('申込完了', [wip('T3-2 / T3-4', '受付コードの表示（F-24）を実装する')]);
+}
+function renderLookup() {
+  return publicShell('申込の確認', [wip('T3-4', '受付コード＋メールでの照会とキャンセル（F-25）を実装する')]);
+}
+
+/* S-14 エラー */
+function renderError(message) {
+  return publicShell('ページが見つかりません', [
+    el('div', { class: 'card' }, [
+      el('p', { text: message || '指定されたページは存在しません。' }),
+      el('a', { class: 'btn', href: '#/public', text: '公開イベント一覧へ' })
+    ])
+  ]);
+}
+
+/* ------------------------------------------------------------
+   起動
+   ------------------------------------------------------------ */
+function boot() {
+  appEl = document.getElementById('app');
+  window.addEventListener('hashchange', router);
+  ensureSettings()
+    .then(function () { router(); })
+    .catch(function (err) {
+      console.error(err);
+      appEl.textContent = 'データベースを開けませんでした: ' + (err && err.message || err);
+    });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+</script>
