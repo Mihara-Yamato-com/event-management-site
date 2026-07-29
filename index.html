@@ -24,6 +24,15 @@
   --color-mark-facet:    #2C3440;
   --color-mark-accent:   #8DA5C4;
 
+  /* 濃色面（参加者トップのヒーロー・オーバーレイ） */
+  --color-hero-bg:       #1D222B;
+  --color-hero-from:     #232936;
+  --color-hero-to:       #454F63;
+  --color-on-dark:       #FFFFFF;   /* 濃色面の上に載せる文字・図形 */
+  --color-overlay:       rgba(22,24,29,.35);   /* モーダルの背面 */
+  --color-overlay-strong: rgba(22,24,29,.82);  /* 画像の上に載せるバッジ */
+  --color-hero-scrim:    rgba(22,24,29,.62);   /* ヘッダー画像を暗く落とす膜 */
+
   /* セマンティック */
   --color-success-bg:    #E4F1E5;  --color-success-text: #2E7D40;
   --color-warning-bg:    #FBF1DA;  --color-warning-text: #96792A;
@@ -630,7 +639,7 @@ input[type=datetime-local] { max-width: 260px; }
 .modal__mask {
   position: fixed;
   inset: 0;
-  background: rgba(26,26,24,.35);
+  background: var(--color-overlay);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -652,6 +661,12 @@ input[type=datetime-local] { max-width: 260px; }
   margin: 0 0 var(--space-lg);
 }
 .modal .formbar { position: static; background: none; }
+
+.toast--danger {
+  background: var(--color-danger-text);
+  color: var(--color-on-dark);
+  max-width: 520px;
+}
 
 .toast {
   position: fixed;
@@ -710,8 +725,8 @@ input[type=datetime-local] { max-width: 260px; }
 .phero {
   width: 100%;
   margin-bottom: var(--space-2xl);
-  background-color: #1D222B;
-  color: #FFFFFF;
+  background-color: var(--color-hero-bg);
+  color: var(--color-on-dark);
 }
 /* 中身は左右に余白を取り中央寄せする */
 .container {
@@ -721,7 +736,7 @@ input[type=datetime-local] { max-width: 260px; }
   padding: 0 var(--space-2xl);
 }
 .phero--plain {
-  background-image: linear-gradient(135deg, #232936 0%, #454F63 100%);
+  background-image: linear-gradient(135deg, var(--color-hero-from) 0%, var(--color-hero-to) 100%);
 }
 .phero__inner {
   max-width: var(--content-max-width);
@@ -823,8 +838,8 @@ input[type=datetime-local] { max-width: 260px; }
   position: absolute;
   top: var(--space-sm);
   left: var(--space-sm);
-  background: rgba(22,24,29,.82);
-  color: #FFFFFF;
+  background: var(--color-overlay-strong);
+  color: var(--color-on-dark);
   font-size: var(--font-size-xs);
   letter-spacing: .08em;
   padding: 2px var(--space-sm);
@@ -1623,10 +1638,33 @@ function openModal(title, children, onSubmit, submitLabel) {
   return close;
 }
 
-function toast(message) {
-  var t = el('div', { class: 'toast', text: message });
+/* T4-2 想定外のエラーの受け皿
+   保存・削除が失敗したときに無反応で終わらないよう、必ず画面へ出す。
+   IndexedDB の失敗は原因が分かりにくいため、代表的なものは言い換える */
+function describeError(err) {
+  if (!err) return '原因不明のエラーが発生しました。ページを開き直してください';
+  var name = err.name || '';
+  if (name === 'QuotaExceededError') {
+    return '端末の保存容量が足りません。資料や画像を減らすか、JSONへ書き出してから初期化してください';
+  }
+  if (name === 'VersionError') {
+    return 'データベースのバージョンが合いません。ページを開き直してください';
+  }
+  if (name === 'InvalidStateError' || name === 'TransactionInactiveError') {
+    return 'データベースへの書き込みに失敗しました。ページを開き直してもう一度お試しください';
+  }
+  return err.message ? ('エラーが発生しました: ' + err.message) : 'エラーが発生しました';
+}
+
+function reportError(err) {
+  if (window.console && console.error) console.error(err);
+  toast(describeError(err), true);
+}
+
+function toast(message, isError) {
+  var t = el('div', { class: 'toast' + (isError ? ' toast--danger' : ''), text: message });
   document.body.appendChild(t);
-  setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2600);
+  setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, isError ? 6000 : 2600);
 }
 
 function errorSummary(messages) {
@@ -1990,8 +2028,8 @@ function router() {
   Promise.resolve(out).then(function (node) {
     renderShell(hit.route.screen, node);
   }).catch(function (err) {
-    console.error(err);
-    renderShell('S-14', renderError(String(err && err.message || err)));
+    if (window.console && console.error) console.error(err);
+    renderShell('S-14', renderError(describeError(err)));
   });
 }
 
@@ -2297,7 +2335,9 @@ function renderDashboard() {
 }
 
 /* カテゴリ配分の円グラフ（F-18）。SVG を自前で描画する（外部ライブラリ不可） */
-var PIE_COLORS = ['#4A7BC8', '#4CAF6D', '#C8944A', '#8A6BC1', '#C05B7A', '#4AA8A8', '#8A8880'];
+/* カテゴリ円グラフの配色。カテゴリ数は可変のためトークン化せず定数で持つ（仕様書 9.2）
+   末尾の1色が旧パレットの暖色グレーだったため、ニュートラル系に差し替えた */
+var PIE_COLORS = ['#4A7BC8', '#4CAF6D', '#C8944A', '#8A6BC1', '#C05B7A', '#4AA8A8', '#6B7280'];
 
 function pieChart(slices, size) {
   size = size || 180;
@@ -4543,7 +4583,7 @@ function renderPublicList() {
       var hero = el('section', {
         class: 'phero' + (org.headerImage ? '' : ' phero--plain'),
         style: org.headerImage
-          ? 'background-image:linear-gradient(rgba(10,12,16,.62),rgba(10,12,16,.62)),url(' +
+          ? 'background-image:linear-gradient(var(--color-hero-scrim),var(--color-hero-scrim)),url(' +
             blobUrl(org.headerImage) + ');background-size:cover;background-position:center'
           : ''
       }, [
@@ -5373,14 +5413,31 @@ function renderError(message) {
    ------------------------------------------------------------ */
 function boot() {
   appEl = document.getElementById('app');
+
+  // 個々の .catch を書き漏らしても無反応にならないようにする（T4-2）
+  window.addEventListener('unhandledrejection', function (e) {
+    reportError(e.reason);
+  });
+  window.addEventListener('error', function (e) {
+    reportError(e.error || new Error(e.message));
+  });
+
   window.addEventListener('hashchange', router);
   ensureSettings()
     .then(refreshOrgCache)
     .then(refreshUiCache)
     .then(function () { router(); })
     .catch(function (err) {
-      console.error(err);
-      appEl.textContent = 'データベースを開けませんでした: ' + (err && err.message || err);
+      if (window.console && console.error) console.error(err);
+      appEl.textContent = '';
+      appEl.appendChild(el('div', { class: 'login' }, [
+        el('div', { class: 'card' }, [
+          el('h1', { class: 'pagehead__title', text: '起動できませんでした' }),
+          el('p', { text: describeError(err) }),
+          el('p', { class: 'muted', text: 'ブラウザのプライベートウィンドウでは IndexedDB が使えないことがあります。'
+            + '通常のウィンドウで index.html を開き直してください。' })
+        ])
+      ]));
     });
 }
 
