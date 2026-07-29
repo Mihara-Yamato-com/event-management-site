@@ -154,7 +154,7 @@ def sheet_cover():
          '<sheetData>']
     body = {8: (11, SERVICE), 12: (9, '結合試験仕様書兼実施項目書'),
             14: (8, '対象: index.html（単一ファイル・file:// 起動）'),
-            15: (8, '試験項目: 全80項目（大項目10）'),
+            15: (8, '試験項目: 全%d項目（大項目%d）' % (sum(len(x[3]) for x in SECTIONS), len(SECTIONS))),
             16: (8, '動作保証: Google Chrome のみ'),
             29: (8, COMPANY), 30: (8, MADE)}
     for r in range(1, 33):
@@ -229,7 +229,7 @@ NG_HEADER = ['No', '状態', '対象機能', '明細No', '試験項目', '観点
 
 # ---------- 生成 ----------
 sheets = []   # (name, xml)
-sheets.append(('表示', sheet_cover()))
+sheets.append(('表紙', sheet_cover()))
 sheets.append(('凡例・用語集', simple_sheet(
     '★ 凡例・用語集（この仕様書の見方と用語の説明）',
     '※ システムに詳しくない方が各シートを読む際の手引きです。',
