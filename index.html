@@ -1497,7 +1497,8 @@ var MSG = {
   imageTooLarge: '画像は2MB以内のファイルを選択してください',
   fileTooLarge: 'ファイルは5MB以内のものを選択してください',
   fileFormat: '対応していないファイル形式です',
-  fileTooMany: '資料は20件以内で登録してください'
+  fileTooMany: '資料は20件以内で登録してください',
+  loginFailed: 'メールアドレスまたはパスワードが正しくありません'
 };
 
 /* ------------------------------------------------------------
@@ -2681,6 +2682,12 @@ function renderEventEdit(id) {
       { label: '開始日時', required: true, help: '公開イベントページと一覧カードに表示されます。過去日時も登録できます。' },
       el('input', { type: 'datetime-local', value: toLocalInput(draft.startAt) })
     );
+    // D-26 申込締切の初期値は開始日時と同じ。締切が未入力のときだけ補完する
+    fields.startAt.__control.addEventListener('change', function () {
+      if (fields.deadline && !fields.deadline.__control.value) {
+        fields.deadline.__control.value = fields.startAt.__control.value;
+      }
+    });
 
     fields.endAt = field(
       { label: '終了日時', required: true, help: 'この時刻を過ぎるとイベントは自動で「終了」になり、公開イベント一覧から外れます。' },
@@ -5083,7 +5090,7 @@ function renderLookup() {
           // 登録の有無を区別しない。存在しないメールアドレスを判別されないようにする
           if (!known || known !== pass) {
             errorHost.appendChild(el('div', { class: 'alert alert--danger',
-              text: 'メールアドレスまたはパスワードが正しくありません。' }));
+              text: MSG.loginFailed }));
             return;
           }
           lookupSession = { email: email };
