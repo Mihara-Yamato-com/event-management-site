@@ -73,6 +73,8 @@
 
 * { box-sizing: border-box; }
 
+html { scrollbar-gutter: stable; }   /* スクロールバーの有無で幅が変わらないようにする（Issue #9） */
+
 body {
   margin: 0;
   background: var(--color-bg);
@@ -8745,20 +8747,27 @@ function renderPublicList() {
 
       /* ---- カテゴリから探す：公開中の絞り込みではなく、終了分も含めて別に並べる ---- */
       var browsable = events.filter(function (ev) { return ev.status === 'published'; });
-      var chips = categories.map(function (c) {
-        var count = browsable.filter(function (ev) { return ev.category === c; }).length;
+      // 「すべて」はカテゴリを問わず全件を出す。未選択（空文字）とは区別する（Issue #9）
+      var BROWSE_ALL = '__all';
+      var chipDefs = [{ key: BROWSE_ALL, label: 'すべて', count: browsable.length }].concat(
+        categories.map(function (c) {
+          return { key: c, label: c,
+            count: browsable.filter(function (ev) { return ev.category === c; }).length };
+        }));
+      var chips = chipDefs.map(function (d) {
         return el('button', {
-          class: 'catchip' + (s.browse === c ? ' is-active' : ''),
-          onclick: function () { s.browse = (s.browse === c ? '' : c); router(); }
+          class: 'catchip' + (s.browse === d.key ? ' is-active' : ''),
+          onclick: function () { s.browse = (s.browse === d.key ? '' : d.key); router(); }
         }, [
-          el('span', { class: 'catchip__label', text: c }),
-          el('span', { class: 'catchip__count', text: String(count) })
+          el('span', { class: 'catchip__label', text: d.label }),
+          el('span', { class: 'catchip__count', text: String(d.count) })
         ]);
       });
 
-      var browsed = s.browse
-        ? browsable.filter(function (ev) { return ev.category === s.browse; })
-        : [];
+      var browsed = !s.browse ? []
+        : (s.browse === BROWSE_ALL
+            ? browsable.slice()
+            : browsable.filter(function (ev) { return ev.category === s.browse; }));
       browsed.sort(function (a, b) { return new Date(b.startAt) - new Date(a.startAt); });
 
       var catSection = el('section', { class: 'psection' }, [
@@ -8774,7 +8783,8 @@ function renderPublicList() {
           s.browse
             ? el('div', { style: 'margin-top:var(--space-2xl)' }, [
                 el('div', { class: 'psection__head' }, [
-                  el('h3', { class: 'psection__title', text: s.browse + ' のイベント' }),
+                  el('h3', { class: 'psection__title',
+                    text: (s.browse === BROWSE_ALL ? 'すべて' : s.browse) + ' のイベント' }),
                   el('span', { class: 'muted', text: browsed.length + ' 件（終了分を含む）' })
                 ]),
                 browsed.length === 0
