@@ -789,11 +789,49 @@ input[type=datetime-local] { max-width: 260px; }
 .psection__head--left { justify-content: flex-start; gap: var(--space-lg); }
 .psection__title { font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); margin: 0; }
 
-.ecards {
+/* カルーセル。スクロールバーは出さず、左右のボタンで送る（Issue #7） */
+.carousel { position: relative; }
+.carousel__track {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(240px, 1fr);
   gap: var(--space-lg);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  /* スクロールバーを隠す */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* ボタンに隠れないよう左右に余白を確保する */
+  padding: var(--space-xs) 0;
 }
+.carousel__track::-webkit-scrollbar { display: none; }
+.carousel__track > * { scroll-snap-align: start; }
+
+.carousel__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  border: var(--border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--font-size-xl);
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.carousel__nav:hover { background: var(--color-surface-sub); }
+.carousel__nav[disabled] { opacity: .3; cursor: default; }
+.carousel__nav[hidden] { display: none; }
+.carousel__nav--prev { left: calc(var(--space-xl) * -1); }
+.carousel__nav--next { right: calc(var(--space-xl) * -1); }
 .ecard {
   display: flex;
   flex-direction: column;
@@ -4543,6 +4581,52 @@ function eventCard(ev, opts) {
   ]);
 }
 
+/* イベントカードのカルーセル（Issue #7）
+   件数が画面幅を超えるときは左右のボタンで送る。スクロールバーは出さない */
+function eventCarousel(events, opts) {
+  opts = opts || {};
+  var track = el('div', { class: 'carousel__track' },
+    events.map(function (ev) { return eventCard(ev, opts); }));
+  var prev = el('button', { class: 'carousel__nav carousel__nav--prev',
+    'aria-label': '前のイベントを表示', text: '‹' });
+  var next = el('button', { class: 'carousel__nav carousel__nav--next',
+    'aria-label': '次のイベントを表示', text: '›' });
+
+  function step() {
+    // カード1枚ぶん＋間隔。1枚も測れないときは幅の8割を送る
+    var card = track.firstChild;
+    if (!card) return Math.round(track.clientWidth * 0.8);
+    var gap = parseFloat(getComputedStyle(track).columnGap || '16') || 16;
+    return Math.round(card.getBoundingClientRect().width + gap);
+  }
+  function sync() {
+    // はみ出していなければボタン自体を出さない
+    var overflow = track.scrollWidth - track.clientWidth;
+    var hidden = overflow <= 1;
+    prev.hidden = hidden;
+    next.hidden = hidden;
+    if (hidden) return;
+    prev.disabled = track.scrollLeft <= 1;
+    next.disabled = track.scrollLeft >= overflow - 1;
+  }
+  function move(dir) {
+    track.scrollBy({ left: dir * step(), behavior: 'smooth' });
+    // スクロールイベントに頼らず、送ったあとにも状態を取り直す
+    setTimeout(sync, 60);
+    setTimeout(sync, 400);
+  }
+  prev.addEventListener('click', function () { move(-1); });
+  next.addEventListener('click', function () { move(1); });
+
+  track.addEventListener('scroll', sync);
+  window.addEventListener('resize', sync);
+  // 幅が確定するまで数回試す。初回だけだとレイアウト前に走って
+  // 「はみ出していない」と誤判定し、ボタンが出ないままになる
+  [0, 100, 400].forEach(function (ms) { setTimeout(sync, ms); });
+
+  return el('div', { class: 'carousel' }, [prev, track, next]);
+}
+
 function renderPublicList() {
   return Promise.all([storeGetAllRaw(STORE_EVENTS), getSetting('categories'), getSetting('org')])
     .then(function (res) {
@@ -4620,7 +4704,7 @@ function renderPublicList() {
                 text: live.length === 0
                   ? '現在公開中のイベントはありません。'
                   : '条件に一致するイベントがありません。' })])
-            : el('div', { class: 'ecards' }, shown.map(function (ev) { return eventCard(ev); }))
+            : eventCarousel(shown)
         ])
       ]);
 
@@ -4661,9 +4745,7 @@ function renderPublicList() {
                 browsed.length === 0
                   ? el('div', { class: 'card' }, [el('div', { class: 'empty',
                       text: 'このカテゴリのイベントはまだありません。' })])
-                  : el('div', { class: 'ecards' }, browsed.map(function (ev) {
-                      return eventCard(ev, { showStatus: true });
-                    }))
+                  : eventCarousel(browsed, { showStatus: true })
               ])
             : null
         ].filter(Boolean))
