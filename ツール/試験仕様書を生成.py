@@ -7,7 +7,7 @@ import zipfile, shutil, os, sys
 from xml.sax.saxutils import escape
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from 試験項目 import SECTIONS
+from 試験項目 import SECTIONS, AI_ADDED
 
 TEMPLATE = '/home/mihara/projects/event-management-site/totaltest.xlsx'
 OUT = '/home/mihara/projects/event-management-site/結合試験仕様書.xlsx'
@@ -16,6 +16,7 @@ SERVICE = 'ACTIO（イベント主催・管理サービス）'
 COMPANY = '日本コムシンク株式会社'
 MADE = '　作成：2026年7月29日'
 TESTER = '三原'
+AI_NOTE = 'AIレビューにより追記'
 
 # ---------- 共有文字列 ----------
 class SST:
@@ -116,6 +117,9 @@ def sheet_section(no, name, mokuteki, zentei, rows):
     for i, (naka, kanten, zen, tejun, kitai, biko) in enumerate(rows):
         r = 8 + i
         first = (i == 0)
+        ai = naka in AI_ADDED
+        if ai:
+            biko = (biko + ' ／ ' + AI_NOTE) if biko else AI_NOTE
         cells = [
             cn('B%d' % r, 28, no) if first else ce('B%d' % r, 29),
             cn('C%d' % r, 28, 1) if first else ce('C%d' % r, 29),
@@ -131,7 +135,7 @@ def sheet_section(no, name, mokuteki, zentei, rows):
             ce('M%d' % r, 2),           # 日付
             ce('N%d' % r, 13),          # 結果
             cs('O%d' % r, 13, biko),
-            ce('P%d' % r, 13),
+            cs('P%d' % r, 13, '利用') if ai else ce('P%d' % r, 13),
         ]
         x.append('<row r="%d" spans="1:16">%s</row>' % (r, ''.join(cells)))
 
@@ -212,7 +216,7 @@ LEGEND_ROWS = [
     ('', '期待結果', '操作後に「こうなっていれば正しい」という状態。'),
     ('', '結果（〇 / ×）', '〇＝期待どおり動いた。×＝期待どおりにならなかった（不具合）。×はNG項目一覧に転記します。'),
     ('', '備考', '補足。先頭の「ID:」は対応する機能ID・入力仕様IDで、続けてその仕様にした理由や、実施するうえでの注意を書いています。'),
-    ('', 'AI', 'AI を利用した項目に「利用」と記入します。本仕様書では、AI が自動で実施した項目に記入しています。'),
+    ('', 'AI', 'AI を利用した項目に「利用」と記入します。本仕様書では、AI のレビューで追記した項目に記入し、備考にも「AIレビューにより追記」と残しています。'),
     ('観点', '操作', 'ボタンや入力など、利用者の操作が意図どおり動くか。'),
     ('', '表示', '画面に出る内容・レイアウトが正しいか。'),
     ('', '状態遷移', '操作の前後で状態が正しく変わるか（未受付→参加確定 など）。'),
