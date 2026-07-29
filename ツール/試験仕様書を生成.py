@@ -15,6 +15,7 @@ OUT = '/home/mihara/projects/event-management-site/結合試験仕様書.xlsx'
 SERVICE = 'ACTIO（イベント主催・管理サービス）'
 COMPANY = '日本コムシンク株式会社'
 MADE = '　作成：2026年7月29日'
+TESTER = '三原'
 
 # ---------- 共有文字列 ----------
 class SST:
@@ -126,7 +127,7 @@ def sheet_section(no, name, mokuteki, zentei, rows):
             cs('I%d' % r, 13, zen),
             cs('J%d' % r, 13, tejun),
             cs('K%d' % r, 13, kitai),
-            ce('L%d' % r, 13),          # 担当者（実施時に記入）
+            cs('L%d' % r, 13, TESTER),  # 担当者
             ce('M%d' % r, 2),           # 日付
             ce('N%d' % r, 13),          # 結果
             cs('O%d' % r, 13, biko),
