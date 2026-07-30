@@ -290,7 +290,17 @@ a { color: inherit; }
   font-weight: var(--font-weight-bold);
   margin: 0;
   letter-spacing: .01em;
+  /* D-11 イベント名は100文字まで入る。長い名前でも右のボタンを押しつぶさないよう、
+     自身が縮んで2行で省略する（flex item の既定 min-width:auto を打ち消す） */
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
+/* ボタン群は縮めない。縮むとボタンの文字が折り返してレイアウトが崩れる */
+.pagehead > .stack { flex-shrink: 0; }
 
 /* ---------- 部品 ---------- */
 .card {
