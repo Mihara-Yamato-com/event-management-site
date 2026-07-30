@@ -7,7 +7,7 @@ import zipfile, shutil, os, sys
 from xml.sax.saxutils import escape
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from 試験項目 import SECTIONS, AI_ADDED, UNDONE
+from 試験項目 import SECTIONS, AI_ADDED, OUT_OF_SCOPE
 
 TEMPLATE = '/home/mihara/projects/event-management-site/totaltest.xlsx'
 OUT = '/home/mihara/projects/event-management-site/結合試験仕様書.xlsx'
@@ -17,7 +17,7 @@ COMPANY = '日本コムシンク株式会社'
 MADE = '　作成：2026年7月29日'
 TESTER = '三原'
 AI_NOTE = 'AIレビューにより追記'
-UNDONE_MARK = '未実施'
+OUT_OF_SCOPE_MARK = '対象外'
 
 # ---------- 共有文字列 ----------
 class SST:
@@ -134,7 +134,7 @@ def sheet_section(no, name, mokuteki, zentei, rows):
             cs('K%d' % r, 13, kitai),
             cs('L%d' % r, 13, TESTER),  # 担当者
             ce('M%d' % r, 2),           # 日付
-            cs('N%d' % r, 13, UNDONE_MARK) if naka in UNDONE else ce('N%d' % r, 13),  # 結果
+            cs('N%d' % r, 13, OUT_OF_SCOPE_MARK) if naka in OUT_OF_SCOPE else ce('N%d' % r, 13),  # 結果
             cs('O%d' % r, 13, biko),
             cs('P%d' % r, 13, '利用') if ai else ce('P%d' % r, 13),
         ]
@@ -163,8 +163,8 @@ def sheet_cover():
             15: (8, '試験項目: 全%d項目（大項目%d）' % (sum(len(x[3]) for x in SECTIONS), len(SECTIONS))),
             16: (8, '動作保証: Google Chrome のみ'),
             29: (8, COMPANY), 30: (8, MADE)}
-    if UNDONE:
-        body[17] = (8, 'うち未実施: %d項目（%s）' % (len(UNDONE), '／'.join(UNDONE)))
+    if OUT_OF_SCOPE:
+        body[17] = (8, 'うち対象外: %d項目（%s）' % (len(OUT_OF_SCOPE), '／'.join(OUT_OF_SCOPE)))
     for r in range(1, 33):
         if r in body:
             st, t = body[r]
@@ -217,8 +217,8 @@ LEGEND_ROWS = [
     ('', '前提条件', 'テストを始める前に整えておく状態・準備。'),
     ('', '手順', '実際に行う操作の手順。'),
     ('', '期待結果', '操作後に「こうなっていれば正しい」という状態。'),
-    ('', '結果（〇 / × / 未実施）', '〇＝期待どおり動いた。×＝期待どおりにならなかった（不具合）。×はNG項目一覧に転記します。'
-     '未実施＝本来やるべき項目だが、今回の期間内では実施できなかったもの。理由は備考に「【今回は未実施】」として記載しています。'),
+    ('', '結果（〇 / × / 対象外）', '〇＝期待どおり動いた。×＝期待どおりにならなかった（不具合）。×はNG項目一覧に転記します。'
+     '対象外＝この構成では実現できないため、試験の対象としないもの。理由は備考に「【対象外】」として記載しています。'),
     ('', '備考', '補足。先頭の「ID:」は対応する機能ID・入力仕様IDで、続けてその仕様にした理由や、実施するうえでの注意を書いています。'),
     ('', 'AI', 'AI を利用した項目に「利用」と記入します。本仕様書では、AI のレビューで追記した項目に記入し、備考にも「AIレビューにより追記」と残しています。'),
     ('観点', '操作', 'ボタンや入力など、利用者の操作が意図どおり動くか。'),
