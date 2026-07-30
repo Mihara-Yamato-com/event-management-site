@@ -5,6 +5,9 @@
 使い方: 試験結果を記入.py results.json
   results.json = [{"sheet": 4, "no": 1, "result": "〇", "date": 46232, "ai": "利用"}, ...]
   sheet は大項目の通し番号（1=イベント管理 … 10=境界値・異常系）、no は明細番号。
+
+  記入済みの欄を空に戻すには "clear" を使う（手動で再実施する項目を未記入に戻す場合）。
+  [{"sheet": 5, "no": 4, "clear": ["date", "result"]}, ...]
 """
 import zipfile, shutil, sys, json, io, os, re
 from xml.sax.saxutils import escape
@@ -45,17 +48,20 @@ def patch(results):
         xml = parts[name].decode('utf-8')
         for r in rows:
             row = 7 + int(r['no'])            # データは8行目から
-            for col, val, kind in ((COL_DATE, r.get('date'), 'n'),
-                                   (COL_RESULT, r.get('result'), 's'),
-                                   (COL_AI, r.get('ai'), 's')):
-                if val in (None, ''):
+            clear = set(r.get('clear', []))
+            for col, val, kind, key in ((COL_DATE, r.get('date'), 'n', 'date'),
+                                        (COL_RESULT, r.get('result'), 's', 'result'),
+                                        (COL_AI, r.get('ai'), 's', 'ai')):
+                if key not in clear and val in (None, ''):
                     continue
                 ref = '%s%d' % (col, row)
                 m = re.search(r'<c r="%s"(?: s="(\d+)")?[^>]*?(?:/>|>.*?</c>)' % ref, xml, re.S)
                 if not m:
                     raise SystemExit('セルが見つかりません: %s シート%d' % (ref, sheet_no))
                 style = m.group(1) or '0'
-                if kind == 'n':
+                if key in clear:                   # 空欄に戻す
+                    cell = '<c r="%s" s="%s"/>' % (ref, style)
+                elif kind == 'n':
                     cell = '<c r="%s" s="%s"><v>%s</v></c>' % (ref, style, val)
                 else:
                     cell = '<c r="%s" s="%s" t="s"><v>%d</v></c>' % (ref, style, sid(val))
