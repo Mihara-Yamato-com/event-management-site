@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
-"""結合試験仕様書.xlsx の実施欄（日付・結果・AI）を書き換える。
+"""結合試験仕様書.xlsx の実施欄（日付・結果・AI）と、手順・期待結果・備考を書き換える。
 
 再生成すると手動で記入済みの結果が消えるため、既存ファイルのセルだけを差し替える。
 使い方: 試験結果を記入.py results.json
   results.json = [{"sheet": 4, "no": 1, "result": "〇", "date": 46232, "ai": "利用"}, ...]
   sheet は大項目の通し番号（1=イベント管理 … 10=境界値・異常系）、no は明細番号。
+
+  実施欄以外も直せる（実装と食い違っていた期待結果の是正、エビデンス有無の記録に使う）。
+  [{"sheet": 10, "no": 7, "step": "…", "expected": "…", "note": "…"}, ...]
 
   記入済みの欄を空に戻すには "clear" を使う（手動で再実施する項目を未記入に戻す場合）。
   [{"sheet": 5, "no": 4, "clear": ["date", "result"]}, ...]
@@ -14,6 +17,7 @@ from xml.sax.saxutils import escape
 
 XLSX = '/home/mihara/projects/event-management-site/結合試験仕様書.xlsx'
 COL_DATE, COL_RESULT, COL_AI = 'M', 'N', 'P'
+COL_PRE, COL_STEP, COL_EXPECTED, COL_NOTE = 'I', 'J', 'K', 'O'
 
 
 def load_sst(xml):
@@ -51,7 +55,11 @@ def patch(results):
             clear = set(r.get('clear', []))
             for col, val, kind, key in ((COL_DATE, r.get('date'), 'n', 'date'),
                                         (COL_RESULT, r.get('result'), 's', 'result'),
-                                        (COL_AI, r.get('ai'), 's', 'ai')):
+                                        (COL_AI, r.get('ai'), 's', 'ai'),
+                                        (COL_PRE, r.get('pre'), 's', 'pre'),
+                                        (COL_STEP, r.get('step'), 's', 'step'),
+                                        (COL_EXPECTED, r.get('expected'), 's', 'expected'),
+                                        (COL_NOTE, r.get('note'), 's', 'note')):
                 if key not in clear and val in (None, ''):
                     continue
                 ref = '%s%d' % (col, row)
